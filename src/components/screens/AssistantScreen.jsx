@@ -22,20 +22,14 @@ export default function AssistantScreen({ reservation, session }) {
   const reservationId = reservation?.id
   const guestId = session?.user?.id
 
-  const { conversation, loading: convLoading } = useConversation(reservationId)
+  const { conversation, loading: convLoading, error: convErr } = useConversation(reservationId, guestId)
   const { messages, loading: messagesLoading } = useMessages(conversation?.id)
-  const { sendMessage, loading: sending } = useSendMessage()
-  const [retryKey, setRetryKey] = useState(0)
+  const { sendMessage, sending } = useSendMessage()
 
   useEffect(() => {
-    if (convLoading) {
-      const timeout = setTimeout(() => {
-        if (!conversation) setConvError(true)
-      }, 5000)
-      return () => clearTimeout(timeout)
-    }
-    if (conversation) setConvError(false)
-  }, [convLoading, conversation, retryKey])
+    if (convErr) setConvError(true)
+    else if (conversation) setConvError(false)
+  }, [convErr, conversation])
 
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: 'smooth' })

@@ -1,49 +1,60 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-export const useConversation = (reservationId) => {
+export const useConversation = (reservationId, guestId) => {
   const [conversation, setConversation] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!reservationId) return
-    const fetch = async () => {
+    if (!reservationId || !guestId) {
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const init = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error: fetchErr } = await supabase
           .from('conversations')
           .select('*')
           .eq('reservation_id', reservationId)
           .eq('channel_type', 'in_app')
-          .single()
+          .maybeSingle()
 
-        if (error && error.code !== 'PGRST116') throw error
+        if (fetchErr) throw fetchErr
 
-        if (!data) {
-          const { data: newConv, error: createError } = await supabase
+        if (data) {
+          if (!cancelled) setConversation(data)
+        } else {
+          const { data: newConv, error: insertErr } = await supabase
             .from('conversations')
             .insert({
               reservation_id: reservationId,
+              guest_id: guestId,
               channel_type: 'in_app',
-              status: 'active'
+              status: 'open',
             })
             .select()
             .single()
 
-          if (createError) throw createError
-          setConversation(newConv)
-        } else {
-          setConversation(data)
+          if (insertErr) throw insertErr
+          if (!cancelled) setConversation(newConv)
         }
       } catch (err) {
-        console.error(err)
+        console.error('useConversation error:', err)
+        if (!cancelled) setError(err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
-    fetch()
-  }, [reservationId])
 
-  return { conversation, loading }
+    init()
+    return () => { cancelled = true }
+  }, [reservationId, guestId])
+
+  return { conversation, loading, error }
 }
 
 export const useMessages = (conversationId) => {
@@ -51,8 +62,14 @@ export const useMessages = (conversationId) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!conversationId) return
-    const fetch = async () => {
+    if (!conversationId) {
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchMessages = async () => {
       try {
         const { data, error } = await supabase
           .from('messages')
@@ -61,14 +78,15 @@ export const useMessages = (conversationId) => {
           .order('created_at', { ascending: true })
 
         if (error) throw error
-        setMessages(data || [])
+        if (!cancelled) setMessages(data || [])
       } catch (err) {
-        console.error(err)
+        console.error('useMessages error:', err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
-    fetch()
+
+    fetchMessages()
 
     const subscription = supabase
       .channel(`messages:${conversationId}`)
@@ -78,15 +96,19 @@ export const useMessages = (conversationId) => {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`
+          filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new])
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.new.id)) return prev
+            return [...prev, payload.new]
+          })
         }
       )
       .subscribe()
 
     return () => {
+      cancelled = true
       supabase.removeChannel(subscription)
     }
   }, [conversationId])
@@ -95,56 +117,51 @@ export const useMessages = (conversationId) => {
 }
 
 export const useSendMessage = () => {
-  const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const sendMessage = useCallback(async ({ conversationId, reservationId, guestId, text, accessToken }) => {
-    if (!text.trim()) return
-    setLoading(true)
+    if (!text.trim() || !conversationId) return
+    setSending(true)
 
     try {
-      const { error: msgError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          direction: 'inbound',
-          role: 'guest',
-          message_type: 'text',
-          content_text: text,
-          received_at: new Date().toISOString()
-        })
+      await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        direction: 'inbound',
+        role: 'guest',
+        message_type: 'text',
+        content_text: text,
+        received_at: new Date().toISOString(),
+      })
 
-      if (msgError) throw msgError
-
-      const { data: guestData } = await supabase
-        .from('guests')
-        .select('id')
-        .eq('supabase_user_id', guestId)
-        .single()
-
-      const actualGuestId = guestData?.id || guestId
-
-      const invokeOptions = {
+      const { data, error: fnError } = await supabase.functions.invoke('ai-concierge', {
         body: {
           conversation_id: conversationId,
           reservation_id: reservationId,
-          guest_id: actualGuestId,
-          message_text: text
-        }
-      }
-      if (accessToken) {
-        invokeOptions.headers = { Authorization: `Bearer ${accessToken}` }
-      }
-      const { error: fnError } = await supabase.functions.invoke('ai-concierge', invokeOptions)
+          guest_id: guestId,
+          message_text: text,
+        },
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      })
 
       if (fnError) throw fnError
 
+      if (data?.reply) {
+        await supabase.from('messages').insert({
+          conversation_id: conversationId,
+          direction: 'outbound',
+          role: 'assistant',
+          message_type: 'text',
+          content_text: data.reply,
+          received_at: new Date().toISOString(),
+        })
+      }
     } catch (err) {
-      console.error(err)
+      console.error('sendMessage error:', err)
       throw err
     } finally {
-      setLoading(false)
+      setSending(false)
     }
   }, [])
 
-  return { sendMessage, loading }
+  return { sendMessage, sending }
 }
