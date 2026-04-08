@@ -12,15 +12,22 @@ export default function PropertyScreen({ reservation }) {
   const { rules } = usePropertyRules(propertyId)
 
   const description = knowledge?.find(k => k.category === 'description')?.content || ''
+  const wifiEntry = knowledge?.find(k => k.category === 'wifi')
+  const accessEntries = knowledge?.filter(k => ['checkin', 'checkout', 'access'].includes(k.category)) || []
   const nearby = knowledge?.filter(k => k.category === 'nearby') || []
   const faqs = knowledge?.filter(k => k.category === 'faq') || []
 
-  if (!reservation) {
+  if (!reservation || !propertyId) {
     return (
       <div className="page">
         <Header/>
         <div style={{ padding: '60px var(--px)', textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300, marginBottom: 12 }}>Aucun logement</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} className="dot" style={{ animation: `bounce 1s ${i * 0.2}s infinite` }}/>
+            ))}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 300 }}>Chargement du logement...</div>
         </div>
       </div>
     )
@@ -74,6 +81,38 @@ export default function PropertyScreen({ reservation }) {
           </p>
         )}
       </div>
+
+      {wifiEntry && (
+        <>
+          <div className="slbl">WiFi</div>
+          <div className="ib" style={{ margin: '0 var(--px) 12px' }}>
+            <div className="ir">
+              <div className="iico"><Icon name="wifi" size={15} color="var(--gold-dk)"/></div>
+              <div style={{ flex: 1 }}>
+                <div className="ilbl">{wifiEntry.title}</div>
+                <div className="ival" style={{ fontSize: 16, fontWeight: 600, letterSpacing: 1 }}>{wifiEntry.content}</div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {accessEntries.length > 0 && (
+        <>
+          <div className="slbl">Acces & instructions</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, padding: '0 var(--px) 12px' }}>
+            {accessEntries.map((a, i) => (
+              <div key={i} style={{ background: 'var(--card)', borderRadius: 'var(--r)', padding: '14px 15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <Icon name={a.category === 'checkin' ? 'key' : a.category === 'checkout' ? 'logOut' : 'lock'} size={14} color="var(--gold-dk)"/>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--sub)' }}>{a.title}</div>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, lineHeight: 1.6 }}>{a.content}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {amenities.length > 0 && (
         <>

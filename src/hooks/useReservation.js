@@ -18,7 +18,19 @@ export const useActiveReservation = () => {
           .single()
 
         if (error) throw error
-        setReservation(data)
+
+        if (data?.property_id) {
+          const { data: photos } = await supabase
+            .from('property_photos')
+            .select('url')
+            .eq('property_id', data.property_id)
+            .eq('is_cover', true)
+            .single()
+
+          setReservation({ ...data, cover_photo_url: photos?.url || null })
+        } else {
+          setReservation(data)
+        }
       } catch (err) {
         setError(err)
       } finally {

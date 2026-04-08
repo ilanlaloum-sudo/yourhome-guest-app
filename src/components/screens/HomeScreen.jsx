@@ -52,9 +52,13 @@ export default function HomeScreen({ reservation, onNavigate }) {
 
       <div style={{ padding: '4px var(--px) 0' }}>
         <div className="hero">
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #2D2418, #1A1510)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="building" size={48} color="rgba(196,164,107,.3)" strokeWidth={1}/>
-          </div>
+          {reservation.cover_photo_url ? (
+            <img src={reservation.cover_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #2D2418, #1A1510)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="building" size={48} color="rgba(196,164,107,.3)" strokeWidth={1}/>
+            </div>
+          )}
           <div className="hero-ov"/>
           <div className="hero-ct">
             <div className="hbadge" style={{ background: phase.bg, color: phase.c }}>

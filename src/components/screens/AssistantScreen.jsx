@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Icon from '../ui/Icon'
 import Header from '../layout/Header'
 import { useConversation, useMessages, useSendMessage } from '../../hooks/useConversation'
+import { supabase } from '../../lib/supabase'
 
 const CHIPS = [
   { i: 'key',          l: 'Arrivee' },
@@ -16,13 +17,25 @@ const CHIPS = [
 
 export default function AssistantScreen({ reservation, session }) {
   const [input, setInput] = useState('')
+  const [convError, setConvError] = useState(false)
   const ref = useRef(null)
   const reservationId = reservation?.id
   const guestId = session?.user?.id
 
-  const { conversation } = useConversation(reservationId)
+  const { conversation, loading: convLoading } = useConversation(reservationId)
   const { messages, loading: messagesLoading } = useMessages(conversation?.id)
   const { sendMessage, loading: sending } = useSendMessage()
+  const [retryKey, setRetryKey] = useState(0)
+
+  useEffect(() => {
+    if (convLoading) {
+      const timeout = setTimeout(() => {
+        if (!conversation) setConvError(true)
+      }, 5000)
+      return () => clearTimeout(timeout)
+    }
+    if (conversation) setConvError(false)
+  }, [convLoading, conversation, retryKey])
 
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: 'smooth' })
@@ -32,11 +45,13 @@ export default function AssistantScreen({ reservation, session }) {
     if (!text.trim() || !conversation?.id) return
     setInput('')
     try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
       await sendMessage({
         conversationId: conversation.id,
         reservationId,
         guestId,
         text,
+        accessToken: currentSession?.access_token,
       })
     } catch (err) {
       console.error(err)
@@ -74,6 +89,18 @@ export default function AssistantScreen({ reservation, session }) {
           </div>
         ))}
       </div>
+
+      {convError && (
+        <div style={{ padding: '20px var(--px)', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>Impossible de charger la conversation.</div>
+          <button
+            onClick={() => { setConvError(false); setRetryKey(k => k + 1); window.location.reload() }}
+            style={{ background: 'var(--gold)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Reessayer
+          </button>
+        </div>
+      )}
 
       <div className="cwrap">
         {messagesLoading ? (

@@ -97,7 +97,7 @@ export const useMessages = (conversationId) => {
 export const useSendMessage = () => {
   const [loading, setLoading] = useState(false)
 
-  const sendMessage = useCallback(async ({ conversationId, reservationId, guestId, text }) => {
+  const sendMessage = useCallback(async ({ conversationId, reservationId, guestId, text, accessToken }) => {
     if (!text.trim()) return
     setLoading(true)
 
@@ -123,14 +123,18 @@ export const useSendMessage = () => {
 
       const actualGuestId = guestData?.id || guestId
 
-      const { error: fnError } = await supabase.functions.invoke('ai-concierge', {
+      const invokeOptions = {
         body: {
           conversation_id: conversationId,
           reservation_id: reservationId,
           guest_id: actualGuestId,
           message_text: text
         }
-      })
+      }
+      if (accessToken) {
+        invokeOptions.headers = { Authorization: `Bearer ${accessToken}` }
+      }
+      const { error: fnError } = await supabase.functions.invoke('ai-concierge', invokeOptions)
 
       if (fnError) throw fnError
 
