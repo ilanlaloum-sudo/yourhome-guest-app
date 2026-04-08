@@ -31,10 +31,13 @@ export const useConversation = (reservationId, guestId) => {
           const { data: newConv, error: insertErr } = await supabase
             .from('conversations')
             .insert({
-              reservation_id: reservationId,
+              channel_account_id: '0d0b663b-b04e-42cc-be96-1fe276ef277f',
               guest_id: guestId,
-              channel_type: 'in_app',
+              reservation_id: reservationId,
+              property_id: '05b9c4c2-bb96-431d-a099-394b239ee4bc',
               status: 'open',
+              channel_type: 'in_app',
+              current_handoff_state: 'ai',
             })
             .select()
             .single()
@@ -126,11 +129,13 @@ export const useSendMessage = () => {
     try {
       await supabase.from('messages').insert({
         conversation_id: conversationId,
-        direction: 'inbound',
-        role: 'guest',
+        direction: 'outgoing',
+        topic: 'default',
+        role: 'user',
+        extension: 'text',
         message_type: 'text',
         content_text: text,
-        received_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       })
 
       const { data, error: fnError } = await supabase.functions.invoke('ai-concierge', {
@@ -148,11 +153,13 @@ export const useSendMessage = () => {
       if (data?.reply) {
         await supabase.from('messages').insert({
           conversation_id: conversationId,
-          direction: 'outbound',
+          direction: 'incoming',
+          topic: 'default',
           role: 'assistant',
+          extension: 'text',
           message_type: 'text',
           content_text: data.reply,
-          received_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         })
       }
     } catch (err) {
