@@ -115,11 +115,19 @@ export const useSendMessage = () => {
 
       if (msgError) throw msgError
 
+      const { data: guestData } = await supabase
+        .from('guests')
+        .select('id')
+        .eq('supabase_user_id', guestId)
+        .single()
+
+      const actualGuestId = guestData?.id || guestId
+
       const { error: fnError } = await supabase.functions.invoke('ai-concierge', {
         body: {
           conversation_id: conversationId,
           reservation_id: reservationId,
-          guest_id: guestId,
+          guest_id: actualGuestId,
           message_text: text
         }
       })
