@@ -16,11 +16,21 @@ export const useConversation = (reservationId, guestId) => {
 
     const init = async () => {
       try {
+        // Resolve actual guest UUID from guests table
+        const { data: guestRow } = await supabase
+          .from('guests')
+          .select('id')
+          .eq('supabase_user_id', guestId)
+          .maybeSingle()
+
+        const actualGuestId = guestRow?.id || guestId
+
         const { data, error: fetchErr } = await supabase
           .from('conversations')
           .select('*')
-          .eq('reservation_id', reservationId)
           .eq('channel_type', 'in_app')
+          .eq('guest_id', actualGuestId)
+          .eq('reservation_id', reservationId)
           .maybeSingle()
 
         if (fetchErr) throw fetchErr
@@ -32,7 +42,7 @@ export const useConversation = (reservationId, guestId) => {
             .from('conversations')
             .insert({
               channel_account_id: '0d0b663b-b04e-42cc-be96-1fe276ef277f',
-              guest_id: guestId,
+              guest_id: actualGuestId,
               reservation_id: reservationId,
               property_id: '05b9c4c2-bb96-431d-a099-394b239ee4bc',
               status: 'open',
