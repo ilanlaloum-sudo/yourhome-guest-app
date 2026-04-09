@@ -47,7 +47,7 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   const guestId = session?.user?.id
 
   const { conversation, loading: convLoading, error: convErr } = useConversation(reservationId, guestId)
-  const { messages, loading: messagesLoading } = useMessages(conversation?.id)
+  const { messages, loading: messagesLoading, addMessage } = useMessages(conversation?.id)
   const { sendMessage, sending } = useSendMessage()
 
   useEffect(() => {
@@ -62,15 +62,30 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   const handleSend = async (text) => {
     if (!text.trim() || !conversation?.id) return
     setInput('')
+
+    // Optimistic user message
+    addMessage({
+      id: 'opt-user-' + Date.now(),
+      direction: 'outgoing',
+      role: 'user',
+      content_text: text,
+      created_at: new Date().toISOString(),
+    })
+
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession()
-      await sendMessage({
+      const assistantMsg = await sendMessage({
         conversationId: conversation.id,
         reservationId,
         guestId,
         text,
         accessToken: currentSession?.access_token,
       })
+
+      // Optimistic assistant reply
+      if (assistantMsg) {
+        addMessage(assistantMsg)
+      }
     } catch (err) {
       console.error(err)
     }

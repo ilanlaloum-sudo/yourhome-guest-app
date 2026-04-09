@@ -149,17 +149,33 @@ export const useMessages = (conversationId) => {
     }
   }, [conversationId])
 
-  return { messages, loading }
+  const addMessage = useCallback((msg) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev
+      return [...prev, msg]
+    })
+  }, [])
+
+  return { messages, loading, addMessage }
 }
 
 export const useSendMessage = () => {
   const [sending, setSending] = useState(false)
 
   const sendMessage = useCallback(async ({ conversationId, reservationId, guestId, text, accessToken }) => {
-    if (!text.trim() || !conversationId) return
+    if (!text.trim() || !conversationId) return null
     setSending(true)
 
     try {
+      // Optimistic user message
+      const userMsg = {
+        id: 'opt-user-' + Date.now(),
+        direction: 'outgoing',
+        role: 'user',
+        content_text: text,
+        created_at: new Date().toISOString(),
+      }
+
       await supabase.from('messages').insert({
         conversation_id: conversationId,
         direction: 'outgoing',
@@ -183,6 +199,14 @@ export const useSendMessage = () => {
       console.log('swift-responder response:', JSON.stringify(data))
       const replyText = data?.reply || data?.message
       if (replyText) {
+        const assistantMsg = {
+          id: 'opt-asst-' + Date.now(),
+          direction: 'incoming',
+          role: 'assistant',
+          content_text: replyText,
+          created_at: new Date().toISOString(),
+        }
+
         await supabase.from('messages').insert({
           conversation_id: conversationId,
           direction: 'incoming',
@@ -190,7 +214,10 @@ export const useSendMessage = () => {
           message_type: 'text',
           content_text: replyText,
         })
+
+        return assistantMsg
       }
+      return null
     } catch (err) {
       console.error('sendMessage error:', err)
       throw err
