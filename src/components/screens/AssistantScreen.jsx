@@ -41,7 +41,7 @@ const t = (key, lang) => T[key]?.[lang] || T[key]?.fr || key
 
 export default function AssistantScreen({ reservation, session, lang = 'fr', onToggleLang, onSignOut }) {
   const [input, setInput] = useState('')
-  const [convError, setConvError] = useState(false)
+  const [convError, setConvError] = useState(null)
   const ref = useRef(null)
   const reservationId = reservation?.id
   const guestId = session?.user?.id
@@ -51,8 +51,8 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   const { sendMessage, sending } = useSendMessage()
 
   useEffect(() => {
-    if (convErr) setConvError(true)
-    else if (conversation) setConvError(false)
+    if (convErr) setConvError(typeof convErr === 'string' ? convErr : convErr.message || String(convErr))
+    else if (conversation) setConvError(null)
   }, [convErr, conversation])
 
   useEffect(() => {
@@ -116,9 +116,12 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
 
       {convError && (
         <div style={{ padding: '20px var(--px)', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>{t('loadErr', lang)}</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>{t('loadErr', lang)}</div>
+          <div style={{ fontSize: 11, color: '#B85050', marginBottom: 12, fontFamily: 'monospace', background: 'rgba(184,80,80,.08)', borderRadius: 8, padding: '8px 12px', textAlign: 'left', wordBreak: 'break-word' }}>
+            {convError}
+          </div>
           <button
-            onClick={() => { setConvError(false); window.location.reload() }}
+            onClick={() => { setConvError(null); window.location.reload() }}
             style={{ background: 'var(--gold)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
             {t('retry', lang)}

@@ -16,6 +16,8 @@ export const useConversation = (reservationId, guestId) => {
 
     const init = async () => {
       try {
+        console.log('useConversation init — guestId (supabase uid):', guestId, 'reservationId:', reservationId)
+
         // Resolve actual guest UUID from guests table
         const { data: guestRow } = await supabase
           .from('guests')
@@ -24,20 +26,27 @@ export const useConversation = (reservationId, guestId) => {
           .maybeSingle()
 
         const actualGuestId = guestRow?.id || guestId
+        console.log('actualGuestId:', actualGuestId, '(from guests table:', !!guestRow, ')')
 
         const { data, error: fetchErr } = await supabase
           .from('conversations')
           .select('*')
           .eq('channel_type', 'in_app')
           .eq('guest_id', actualGuestId)
-          .eq('reservation_id', reservationId)
           .maybeSingle()
 
-        if (fetchErr) throw fetchErr
+        console.log('conversation query result:', data, 'error:', fetchErr)
+
+        if (fetchErr) {
+          console.log('conversation error:', fetchErr.message, fetchErr.code)
+          throw fetchErr
+        }
 
         if (data) {
+          console.log('found existing conversation:', data.id)
           if (!cancelled) setConversation(data)
         } else {
+          console.log('no conversation found, creating new one')
           const { data: newConv, error: insertErr } = await supabase
             .from('conversations')
             .insert({
@@ -52,12 +61,16 @@ export const useConversation = (reservationId, guestId) => {
             .select()
             .single()
 
-          if (insertErr) throw insertErr
+          if (insertErr) {
+            console.log('conversation insert error:', insertErr.message, insertErr.code)
+            throw insertErr
+          }
+          console.log('created new conversation:', newConv?.id)
           if (!cancelled) setConversation(newConv)
         }
       } catch (err) {
-        console.error('useConversation error:', err)
-        if (!cancelled) setError(err)
+        console.error('useConversation error:', err.message || err)
+        if (!cancelled) setError(err.message || String(err))
       } finally {
         if (!cancelled) setLoading(false)
       }
