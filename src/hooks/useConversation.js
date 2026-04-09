@@ -168,7 +168,7 @@ export const useSendMessage = () => {
         content_text: text,
       })
 
-      const { data, error: fnError } = await supabase.functions.invoke('ai-concierge', {
+      const { data, error: fnError } = await supabase.functions.invoke('swift-responder', {
         body: {
           conversation_id: conversationId,
           reservation_id: reservationId,
@@ -180,7 +180,7 @@ export const useSendMessage = () => {
 
       if (fnError) throw fnError
 
-      console.log('ai-concierge response:', JSON.stringify(data))
+      console.log('swift-responder response:', JSON.stringify(data))
       const replyText = data?.reply || data?.message
       if (replyText) {
         await supabase.from('messages').insert({
