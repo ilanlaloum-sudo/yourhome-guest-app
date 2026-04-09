@@ -63,21 +63,23 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
   // Calculate nights
   const nights = Math.max(1, Math.round((checkOutDay - checkInDay) / (1000 * 60 * 60 * 24)))
 
-  // Property knowledge entries
+  // Property knowledge entries — parse structured data
   const accessEntry = knowledge?.find(k => k.category === 'access')
   const wifiEntry = knowledge?.find(k => k.category === 'wifi')
   const parkingEntry = knowledge?.find(k => k.category === 'parking')
 
-  const accessCode = accessEntry?.content || '4892'
-  const wifiNetwork = 'TheOpus_Premium'
-  const wifiPassword = 'Dubai2025'
-  const wifiRaw = wifiEntry?.content || 'TheOpus_Premium / Dubai2025'
-  if (wifiRaw.includes('/')) {
-    const parts = wifiRaw.split('/')
-    // Use parsed values if available
-  }
-  const parkingLevel = 'B2'
-  const parkingSpot = 'n°47'
+  const accessRaw = accessEntry?.content || 'Niveau P1 · Appartement 2804. Ascenseur résidentiel jusqu\'au 28e étage. Code : 4892.'
+  const accessCode = accessRaw.match(/Code\s*:\s*(\d+)/)?.[1] || '4892'
+  const accessLocation = 'Niveau P1 · Appartement 2804'
+  const accessInstruction = 'Ascenseur résidentiel · 28e étage'
+
+  const wifiRaw = wifiEntry?.content || 'TheOpus_Premium / Dubai2025#'
+  const wifiParts = wifiRaw.split('/')
+  const wifiNetwork = wifiParts[0]?.trim() || 'TheOpus_Premium'
+  const wifiPassword = wifiParts[1]?.trim() || 'Dubai2025#'
+
+  const parkingLocation = 'Niveau B2 · Place n°47'
+  const parkingNote = "Badge dans le tiroir de l'entrée"
 
   if (!reservation) {
     return (
@@ -141,22 +143,25 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
 
       {/* Access Code */}
       <div className="slbl">{t('accessCode', lang)}</div>
-      <div style={{ margin: '0 var(--px) 10px', background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid rgba(196,164,107,.2)' }}>
+      <div style={{ margin: '0 var(--px) 10px', background: '#fff', borderRadius: 12, padding: 16, border: '1px solid rgba(196,164,107,.15)' }}>
         {codesVisible ? (
           <>
-            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 10 }}>
               {t('accessCode', lang)}
             </div>
-            <div style={{ fontSize: 12, color: '#8B7355', fontWeight: 300, marginBottom: 10 }}>
-              Niveau P1 · Appartement 2804
+            <div style={{ fontSize: 11, color: '#9B8C7A', fontWeight: 300, marginBottom: 4 }}>
+              {accessLocation}
             </div>
-            <div style={{ height: 1, background: 'rgba(196,164,107,.15)', margin: 0, marginBottom: 10 }}/>
+            <div style={{ fontSize: 11, color: '#B5A898', fontWeight: 300, marginBottom: 14 }}>
+              {accessInstruction}
+            </div>
+            <div style={{ borderTop: '1px solid rgba(196,164,107,.12)', marginBottom: 14 }}/>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 22, fontWeight: 400, color: '#2C2416', letterSpacing: '0.08em', lineHeight: 1.3 }}>
+              <div style={{ fontSize: 18, fontWeight: 500, color: '#2C2416', letterSpacing: '0.18em' }}>
                 {accessCode}
               </div>
-              <button className="code-copy" onClick={() => handleCopy(accessCode, 'code')} style={{ marginTop: 0 }}>
-                <Icon name="copy" size={16} color="var(--gold)"/>
+              <button className="code-copy" onClick={() => handleCopy(accessCode, 'code')} style={{ marginTop: 0, opacity: 0.7 }}>
+                <Icon name="copy" size={14} color="#C4A46B"/>
                 {copied === 'code' ? t('copied', lang) : ''}
               </button>
             </div>
@@ -164,69 +169,60 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
         ) : (
           <div style={{ textAlign: 'center', padding: '4px 0' }}>
             <Icon name="lock" size={16} color="var(--muted)"/>
-            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
           </div>
         )}
       </div>
 
       {/* WiFi */}
       <div className="slbl">{t('wifi', lang)}</div>
-      <div style={{ margin: '0 var(--px) 10px', background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid rgba(196,164,107,.2)' }}>
+      <div style={{ margin: '0 var(--px) 10px', background: '#fff', borderRadius: 12, padding: 16, border: '1px solid rgba(196,164,107,.15)' }}>
         {codesVisible ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>
-                {t('network', lang)}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 12, color: '#8B7355', fontWeight: 400 }}>{wifiNetwork}</div>
-                <button className="code-copy" onClick={() => handleCopy(wifiNetwork, 'ssid')} style={{ marginTop: 0 }}>
-                  <Icon name="copy" size={16} color="var(--gold)"/>
-                  {copied === 'ssid' ? t('copied', lang) : ''}
-                </button>
-              </div>
+          <>
+            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 10 }}>
+              WiFi
             </div>
-            <div style={{ height: 1, background: 'rgba(196,164,107,.15)' }}/>
-            <div>
-              <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>
-                {t('password', lang)}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 18, fontWeight: 400, color: '#2C2416', letterSpacing: '0.06em' }}>{wifiPassword}</div>
-                <button className="code-copy" onClick={() => handleCopy(wifiPassword, 'pass')} style={{ marginTop: 0 }}>
-                  <Icon name="copy" size={16} color="var(--gold)"/>
-                  {copied === 'pass' ? t('copied', lang) : ''}
-                </button>
-              </div>
+            <div style={{ fontSize: 11, color: '#9B8C7A', fontWeight: 300, marginBottom: 14 }}>
+              {wifiNetwork}
             </div>
-          </div>
+            <div style={{ borderTop: '1px solid rgba(196,164,107,.12)', marginBottom: 14 }}/>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 18, fontWeight: 500, color: '#2C2416', letterSpacing: '0.1em' }}>
+                {wifiPassword}
+              </div>
+              <button className="code-copy" onClick={() => handleCopy(wifiPassword, 'pass')} style={{ marginTop: 0, opacity: 0.7 }}>
+                <Icon name="copy" size={14} color="#C4A46B"/>
+                {copied === 'pass' ? t('copied', lang) : ''}
+              </button>
+            </div>
+          </>
         ) : (
           <div style={{ textAlign: 'center', padding: '4px 0' }}>
             <Icon name="lock" size={16} color="var(--muted)"/>
-            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
           </div>
         )}
       </div>
 
       {/* Parking */}
       <div className="slbl">{t('parking', lang)}</div>
-      <div style={{ margin: '0 var(--px) 10px', background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid rgba(196,164,107,.2)' }}>
+      <div style={{ margin: '0 var(--px) 10px', background: '#fff', borderRadius: 12, padding: 16, border: '1px solid rgba(196,164,107,.15)' }}>
         {codesVisible ? (
           <>
-            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 10 }}>
               {t('parking', lang)}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 400, color: '#2C2416', marginBottom: 4 }}>
-              Niveau {parkingLevel} · Place {parkingSpot}
+            <div style={{ fontSize: 11, color: '#9B8C7A', fontWeight: 300, marginBottom: 4 }}>
+              {parkingLocation}
             </div>
-            <div style={{ fontSize: 12, color: '#8B7355', fontWeight: 300 }}>
-              Badge dans le tiroir de l'entrée
+            <div style={{ fontSize: 11, color: '#B5A898', fontWeight: 300 }}>
+              {parkingNote}
             </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '4px 0' }}>
             <Icon name="lock" size={16} color="var(--muted)"/>
-            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
           </div>
         )}
       </div>
