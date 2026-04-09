@@ -5,26 +5,52 @@ import { useConversation, useMessages, useSendMessage } from '../../hooks/useCon
 import { supabase } from '../../lib/supabase'
 
 const CHIPS = {
-  fr: [
-    { i: 'key',          l: 'Arrivée' },
-    { i: 'wifi',         l: 'WiFi' },
-    { i: 'parking',      l: 'Parking' },
-    { i: 'concierge',    l: 'Service' },
-    { i: 'logOut',       l: 'Check-out' },
-    { i: 'alert',        l: 'Problème' },
-    { i: 'utensils',     l: 'Restaurant' },
-    { i: 'mapPin',       l: 'Quartier' },
-  ],
-  en: [
-    { i: 'key',          l: 'Arrival' },
-    { i: 'wifi',         l: 'WiFi' },
-    { i: 'parking',      l: 'Parking' },
-    { i: 'concierge',    l: 'Service' },
-    { i: 'logOut',       l: 'Check-out' },
-    { i: 'alert',        l: 'Issue' },
-    { i: 'utensils',     l: 'Restaurant' },
-    { i: 'mapPin',       l: 'Neighbourhood' },
-  ],
+  fr: {
+    in_stay: [
+      { i: 'wifi',       l: 'WiFi ?' },
+      { i: 'parking',    l: 'Parking ?' },
+      { i: 'moon',       l: 'Late check-out ?' },
+      { i: 'utensils',   l: 'Restaurants ?' },
+      { i: 'taxi',       l: 'Taxi ?' },
+    ],
+    confirmed: [
+      { i: 'key',        l: 'Arrivée' },
+      { i: 'plane',      l: 'Transfert' },
+      { i: 'shoppingBag',l: 'Courses' },
+      { i: 'concierge',  l: 'Services' },
+      { i: 'alert',      l: 'Question' },
+    ],
+    default: [
+      { i: 'key',        l: 'Arrivée' },
+      { i: 'wifi',       l: 'WiFi' },
+      { i: 'concierge',  l: 'Service' },
+      { i: 'utensils',   l: 'Restaurant' },
+      { i: 'mapPin',     l: 'Quartier' },
+    ],
+  },
+  en: {
+    in_stay: [
+      { i: 'wifi',       l: 'WiFi?' },
+      { i: 'parking',    l: 'Parking?' },
+      { i: 'moon',       l: 'Late check-out?' },
+      { i: 'utensils',   l: 'Restaurants?' },
+      { i: 'taxi',       l: 'Taxi?' },
+    ],
+    confirmed: [
+      { i: 'key',        l: 'Arrival' },
+      { i: 'plane',      l: 'Transfer' },
+      { i: 'shoppingBag',l: 'Groceries' },
+      { i: 'concierge',  l: 'Services' },
+      { i: 'alert',      l: 'Question' },
+    ],
+    default: [
+      { i: 'key',        l: 'Arrival' },
+      { i: 'wifi',       l: 'WiFi' },
+      { i: 'concierge',  l: 'Service' },
+      { i: 'utensils',   l: 'Restaurant' },
+      { i: 'mapPin',     l: 'Area' },
+    ],
+  },
 }
 
 const T = {
@@ -33,7 +59,7 @@ const T = {
   online:     { fr: 'En ligne',   en: 'Online' },
   loadErr:    { fr: 'Impossible de charger la conversation.', en: 'Unable to load conversation.' },
   retry:      { fr: 'Réessayer',  en: 'Retry' },
-  greeting:   { fr: 'Bonjour ! Je suis votre assistant Your Home. Comment puis-je vous aider ?', en: 'Hello! I\'m your Your Home assistant. How can I help you?' },
+  greeting:   { fr: 'Bonjour ! Je suis votre concierge The Opus. Comment puis-je vous aider ?', en: 'Hello! I\'m your concierge at The Opus. How can I help?' },
   placeholder:{ fr: 'Posez votre question...', en: 'Ask your question...' },
 }
 
@@ -45,10 +71,13 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   const ref = useRef(null)
   const reservationId = reservation?.id
   const guestId = session?.user?.id
+  const stayPhase = reservation?.status || 'default'
 
   const { conversation, loading: convLoading, error: convErr } = useConversation(reservationId, guestId)
   const { messages, loading: messagesLoading, addMessage } = useMessages(conversation?.id)
   const { sendMessage, sending } = useSendMessage()
+
+  const chips = CHIPS[lang]?.[stayPhase] || CHIPS[lang]?.default || CHIPS.fr.default
 
   useEffect(() => {
     if (convErr) setConvError(typeof convErr === 'string' ? convErr : convErr.message || String(convErr))
@@ -63,7 +92,6 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
     if (!text.trim() || !conversation?.id) return
     setInput('')
 
-    // Optimistic user message
     addMessage({
       id: 'opt-user-' + Date.now(),
       direction: 'outgoing',
@@ -82,7 +110,6 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
         accessToken: currentSession?.access_token,
       })
 
-      // Optimistic assistant reply
       if (assistantMsg) {
         addMessage(assistantMsg)
       }
@@ -121,7 +148,7 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
       </div>
 
       <div className="chips">
-        {(CHIPS[lang] || CHIPS.fr).map(s => (
+        {chips.map(s => (
           <div key={s.l} className="chip" onClick={() => handleSend(s.l)}>
             <Icon name={s.i} size={13}/>
             <span>{s.l}</span>

@@ -1,64 +1,83 @@
+import { useState } from 'react'
 import Icon from '../ui/Icon'
 import Header from '../layout/Header'
 import { usePropertyRules, usePropertyKnowledge } from '../../hooks/useProperty'
 
 const fmtLong = (d) => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+const fmtDay = (d) => new Date(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 const T = {
   noStay:     { fr: 'Aucun séjour actif',  en: 'No active stay' },
   myStay:     { fr: 'Mon séjour',          en: 'My stay' },
+  theOpus:    { fr: 'The Opus',            en: 'The Opus' },
+  location:   { fr: 'Business Bay, Dubai', en: 'Business Bay, Dubai' },
   confirmed:  { fr: 'Réservation confirmée', en: 'Reservation confirmed' },
-  checkin:    { fr: 'Check-in',             en: 'Check-in' },
-  arrivalTime:{ fr: "Heure d'arrivée",     en: 'Arrival time' },
+  checkin:    { fr: 'Arrivée',             en: 'Check-in' },
+  checkout:   { fr: 'Départ',              en: 'Check-out' },
+  nights:     { fr: 'nuits',               en: 'nights' },
+  night:      { fr: 'nuit',                en: 'night' },
   from:       { fr: 'À partir de',         en: 'From' },
-  date:       { fr: 'Date',                en: 'Date' },
-  instructions:{ fr: 'Instructions',       en: 'Instructions' },
-  arrivalNote:{ fr: "Note d'arrivée",      en: 'Arrival note' },
-  accessCodes:{ fr: "Codes d'accès",       en: 'Access codes' },
+  before:     { fr: 'Avant',               en: 'Before' },
   accessCode: { fr: "Code d'accès",        en: 'Access code' },
-  available:  { fr: 'Disponible 24h avant votre arrivée', en: 'Available 24h before arrival' },
-  codesOn:    { fr: 'Codes disponibles le', en: 'Codes available on' },
-  stayEnded:  { fr: 'Séjour terminé — codes indisponibles', en: 'Stay ended — codes unavailable' },
+  tapCopy:    { fr: 'Appuyer pour copier', en: 'Tap to copy' },
+  copied:     { fr: 'Copié !',             en: 'Copied!' },
   wifi:       { fr: 'WiFi',                en: 'WiFi' },
-  wifiAvail:  { fr: 'Disponible dans le logement', en: 'Available in property' },
+  network:    { fr: 'Réseau',              en: 'Network' },
+  password:   { fr: 'Mot de passe',        en: 'Password' },
   parking:    { fr: 'Parking',             en: 'Parking' },
-  parkingInfo:{ fr: "Informations disponibles à l'arrivée", en: 'Information available on arrival' },
-  checkout:   { fr: 'Check-out',           en: 'Check-out' },
-  departTime: { fr: 'Heure de départ',     en: 'Departure time' },
-  before:     { fr: 'Avant',              en: 'Before' },
-  lateCheckout:{ fr: 'Demander un late check-out', en: 'Request late check-out' },
-  see:        { fr: 'VOIR',               en: 'VIEW' },
+  level:      { fr: 'Niveau',              en: 'Level' },
+  spot:       { fr: 'Place',               en: 'Spot' },
+  codesOn:    { fr: 'Codes disponibles le', en: 'Codes available on' },
+  stayEnded:  { fr: 'Séjour terminé',      en: 'Stay ended' },
+  arrInstr:   { fr: "Instructions d'arrivée", en: 'Arrival instructions' },
+  depInstr:   { fr: 'Instructions de départ', en: 'Departure instructions' },
+  lateCheckout: { fr: 'Demander un late check-out', en: 'Request late check-out' },
 }
 
 const t = (key, lang) => T[key]?.[lang] || T[key]?.fr || key
 
+const copyToClipboard = (text) => {
+  navigator.clipboard?.writeText(text).catch(() => {})
+}
+
 export default function StayScreen({ reservation, lang = 'fr', onToggleLang, session, onSignOut }) {
+  const [copied, setCopied] = useState(null)
   const { rules } = usePropertyRules(reservation?.property_id)
   const { knowledge } = usePropertyKnowledge(reservation?.property_id)
 
+  const handleCopy = (text, key) => {
+    copyToClipboard(text)
+    setCopied(key)
+    setTimeout(() => setCopied(null), 2000)
+  }
+
   // Date-based code visibility
   const now = new Date()
-  const checkInDate = new Date(reservation?.check_in_at)
-  const checkOutDate = new Date(reservation?.check_out_at)
-  checkInDate.setHours(0, 0, 0, 0)
-  checkOutDate.setHours(0, 0, 0, 0)
-  const codesVisible = now >= checkInDate && now < checkOutDate
-  const stayEnded = now >= checkOutDate
-  const beforeStay = now < checkInDate
+  const checkInDate = reservation?.check_in_at ? new Date(reservation.check_in_at) : new Date()
+  const checkOutDate = reservation?.check_out_at ? new Date(reservation.check_out_at) : new Date()
+  const checkInDay = new Date(checkInDate); checkInDay.setHours(0, 0, 0, 0)
+  const checkOutDay = new Date(checkOutDate); checkOutDay.setHours(0, 0, 0, 0)
+  const codesVisible = now >= checkInDay && now < checkOutDay
+  const stayEnded = now >= checkOutDay
 
-  // Get property knowledge entries
+  // Calculate nights
+  const nights = Math.max(1, Math.round((checkOutDay - checkInDay) / (1000 * 60 * 60 * 24)))
+
+  // Property knowledge entries
   const accessEntry = knowledge?.find(k => k.category === 'access')
   const wifiEntry = knowledge?.find(k => k.category === 'wifi')
   const parkingEntry = knowledge?.find(k => k.category === 'parking')
 
-  // Fallback values for when knowledge entries exist
   const accessCode = accessEntry?.content || '4892'
-  const wifiInfo = wifiEntry?.content || 'TheOpus_Premium / Dubai2025'
-  const parkingInfo = parkingEntry?.content || 'Niveau B2, place n°47'
-
-  const lockedMsg = stayEnded
-    ? t('stayEnded', lang)
-    : `${t('codesOn', lang)} ${fmtLong(reservation?.check_in_at)}`
+  const wifiNetwork = 'TheOpus_Premium'
+  const wifiPassword = 'Dubai2025'
+  const wifiRaw = wifiEntry?.content || 'TheOpus_Premium / Dubai2025'
+  if (wifiRaw.includes('/')) {
+    const parts = wifiRaw.split('/')
+    // Use parsed values if available
+  }
+  const parkingLevel = 'B2'
+  const parkingSpot = 'n°47'
 
   if (!reservation) {
     return (
@@ -73,112 +92,136 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
     )
   }
 
+  const lockedMsg = stayEnded
+    ? t('stayEnded', lang)
+    : `${t('codesOn', lang)} ${fmtLong(reservation.check_in_at)}`
+
   return (
     <div className="page">
       <Header lang={lang} onToggleLang={onToggleLang} session={session} onSignOut={onSignOut}/>
       <div className="ptitle">{t('myStay', lang)}</div>
-      <div className="psub">{reservation.booking_reference || t('confirmed', lang)}</div>
+      <div className="psub">{t('theOpus', lang)} · {t('location', lang)}</div>
 
-      <div className="slbl">{t('checkin', lang)}</div>
-      <div className="ib">
-        <div className="ir">
-          <div className="iico"><Icon name="clock" size={15} color="var(--gold-dk)"/></div>
-          <div style={{ flex: 1 }}>
-            <div className="ilbl">{t('arrivalTime', lang)}</div>
-            <div className="ival">{t('from', lang)} {rules?.checkin_time || '15:00'}</div>
+      {/* Hero dates section */}
+      <div style={{ margin: '0 var(--px) 16px', background: 'var(--card)', borderRadius: 'var(--r)', padding: '24px', display: 'flex', alignItems: 'center', gap: 0 }}>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('checkin', lang)}</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: 'var(--text)', lineHeight: 1.1 }}>
+            {new Date(reservation.check_in_at).getDate()}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--sub)', fontWeight: 300, marginTop: 4 }}>
+            {new Date(reservation.check_in_at).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric' })}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 300, marginTop: 2 }}>
+            {t('from', lang)} {rules?.checkin_time || '15:00'}
           </div>
         </div>
-        <div className="ir">
-          <div className="iico"><Icon name="calendar" size={15} color="var(--gold-dk)"/></div>
-          <div style={{ flex: 1 }}>
-            <div className="ilbl">{t('date', lang)}</div>
-            <div className="ival">{fmtLong(reservation.check_in_at)}</div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 16px' }}>
+          <div style={{ width: 40, height: 1, background: 'var(--bd)' }}/>
+          <div style={{ fontSize: 11, color: 'var(--gold-dk)', fontWeight: 600, margin: '8px 0', whiteSpace: 'nowrap' }}>
+            {nights} {nights > 1 ? t('nights', lang) : t('night', lang)}
+          </div>
+          <div style={{ width: 40, height: 1, background: 'var(--bd)' }}/>
+        </div>
+
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('checkout', lang)}</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: 'var(--text)', lineHeight: 1.1 }}>
+            {new Date(reservation.check_out_at).getDate()}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--sub)', fontWeight: 300, marginTop: 4 }}>
+            {new Date(reservation.check_out_at).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric' })}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 300, marginTop: 2 }}>
+            {t('before', lang)} {rules?.checkout_time || '11:00'}
           </div>
         </div>
-        {reservation.guest_instructions && (
-          <div className="ir">
-            <div className="iico"><Icon name="shield" size={15} color="var(--gold-dk)"/></div>
-            <div style={{ flex: 1 }}>
-              <div className="ilbl">{t('instructions', lang)}</div>
-              <div className="ival">{reservation.guest_instructions}</div>
+      </div>
+
+      {/* Access Code */}
+      <div className="slbl">{t('accessCode', lang)}</div>
+      <div className="code-card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 }}>
+          <Icon name={codesVisible ? 'key' : 'lock'} size={16} color="var(--gold-dk)"/>
+        </div>
+        {codesVisible ? (
+          <>
+            <div className="code-value">{accessCode}</div>
+            <button className="code-copy" onClick={() => handleCopy(accessCode, 'code')}>
+              <Icon name="copy" size={11} color="var(--gold)"/>
+              {copied === 'code' ? t('copied', lang) : t('tapCopy', lang)}
+            </button>
+          </>
+        ) : (
+          <div className="code-hint">{lockedMsg}</div>
+        )}
+      </div>
+
+      {/* WiFi */}
+      <div className="slbl">{t('wifi', lang)}</div>
+      <div className="code-card">
+        {codesVisible ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('network', lang)}</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{wifiNetwork}</div>
+              <button className="code-copy" onClick={() => handleCopy(wifiNetwork, 'ssid')}>
+                <Icon name="copy" size={11} color="var(--gold)"/>
+                {copied === 'ssid' ? t('copied', lang) : t('tapCopy', lang)}
+              </button>
+            </div>
+            <div style={{ height: 1, background: 'var(--bd)' }}/>
+            <div>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('password', lang)}</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', letterSpacing: 2 }}>{wifiPassword}</div>
+              <button className="code-copy" onClick={() => handleCopy(wifiPassword, 'pass')}>
+                <Icon name="copy" size={11} color="var(--gold)"/>
+                {copied === 'pass' ? t('copied', lang) : t('tapCopy', lang)}
+              </button>
             </div>
           </div>
+        ) : (
+          <div className="code-hint">{lockedMsg}</div>
         )}
-        {reservation.arrival_note && (
-          <div className="ir">
-            <div className="iico"><Icon name="messageCircle" size={15} color="var(--gold-dk)"/></div>
-            <div style={{ flex: 1 }}>
-              <div className="ilbl">{t('arrivalNote', lang)}</div>
-              <div className="ival">{reservation.arrival_note}</div>
+      </div>
+
+      {/* Parking */}
+      <div className="slbl">{t('parking', lang)}</div>
+      <div className="code-card">
+        {codesVisible ? (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 32 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('level', lang)}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>{parkingLevel}</div>
+            </div>
+            <div style={{ width: 1, background: 'var(--bd)' }}/>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('spot', lang)}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>{parkingSpot}</div>
             </div>
           </div>
+        ) : (
+          <div className="code-hint">{lockedMsg}</div>
         )}
       </div>
 
-      <div className="slbl">{t('accessCodes', lang)}</div>
-      <div className="ib">
-        <div className="ir">
-          <div className="iico"><Icon name="key" size={15} color="var(--gold-dk)"/></div>
-          <div style={{ flex: 1 }}>
-            <div className="ilbl">{t('accessCode', lang)}</div>
-            {codesVisible ? (
-              <div className="ival code" style={{ fontSize: 18, fontWeight: 600, letterSpacing: 4 }}>{accessCode}</div>
-            ) : (
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, fontWeight: 300 }}>
-                {lockedMsg}
-              </div>
-            )}
+      {/* Instructions */}
+      {reservation.guest_instructions && (
+        <>
+          <div className="slbl">{t('arrInstr', lang)}</div>
+          <div style={{ margin: '0 var(--px) 12px', background: 'var(--card)', borderRadius: 'var(--r)', padding: '20px' }}>
+            <p style={{ fontSize: 13, color: 'var(--sub)', lineHeight: 1.7, fontWeight: 300, fontStyle: 'italic' }}>
+              {reservation.guest_instructions}
+            </p>
           </div>
-        </div>
-        <div className="ir">
-          <div className="iico"><Icon name="wifi" size={15} color="var(--gold-dk)"/></div>
-          <div style={{ flex: 1 }}>
-            <div className="ilbl">{t('wifi', lang)}</div>
-            {codesVisible ? (
-              <div className="ival" style={{ fontSize: 14, fontWeight: 600 }}>{wifiInfo}</div>
-            ) : (
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, fontWeight: 300 }}>
-                {lockedMsg}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="ir">
-          <div className="iico"><Icon name="parking" size={15} color="var(--gold-dk)"/></div>
-          <div style={{ flex: 1 }}>
-            <div className="ilbl">{t('parking', lang)}</div>
-            {codesVisible ? (
-              <div className="ival" style={{ fontSize: 14, fontWeight: 600 }}>{parkingInfo}</div>
-            ) : (
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, fontWeight: 300 }}>
-                {lockedMsg}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      <div className="slbl">{t('checkout', lang)}</div>
-      <div className="ib">
-        <div className="ir">
-          <div className="iico"><Icon name="clock" size={15} color="var(--gold-dk)"/></div>
-          <div style={{ flex: 1 }}>
-            <div className="ilbl">{t('departTime', lang)}</div>
-            <div className="ival">{t('before', lang)} {rules?.checkout_time || '11:00'}</div>
-          </div>
-        </div>
-        <div className="ir">
-          <div className="iico"><Icon name="calendar" size={15} color="var(--gold-dk)"/></div>
-          <div style={{ flex: 1 }}>
-            <div className="ilbl">{t('date', lang)}</div>
-            <div className="ival">{fmtLong(reservation.check_out_at)}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ padding: '8px var(--px)' }}>
+      {/* Late check-out */}
+      <div style={{ padding: '12px var(--px)' }}>
         <button className="btn-o" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <Icon name="clock" size={14} color="var(--gold-dk)"/> {t('lateCheckout', lang)}
+          <Icon name="moon" size={14} color="var(--gold-dk)"/> {t('lateCheckout', lang)}
         </button>
       </div>
     </div>

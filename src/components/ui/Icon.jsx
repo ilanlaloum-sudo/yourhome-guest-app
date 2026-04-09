@@ -44,6 +44,18 @@ const Icon = ({ name, size = 18, color = "currentColor", strokeWidth = 1.5 }) =>
     repeat: <><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></>,
     concierge: <><path d="M3 20h18M12 4v4m-6 2a6 6 0 0112 0H6z"/></>,
     baby: <><circle cx="12" cy="7" r="4"/><path d="M3 20v-1a5 5 0 015-5h8a5 5 0 015 5v1M8 11h8"/></>,
+    copy: <><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></>,
+    broom: <><path d="M12 2v8M4.93 10.93l2.83 2.83M2 18h20M7 22l5-4 5 4"/><path d="M9.17 14.83L12 10l2.83 4.83"/></>,
+    moon: <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>,
+    sun: <><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></>,
+    taxi: <><path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h11l4 4v4a2 2 0 01-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 5V3h6v2"/></>,
+    fire: <path d="M12 12c0-3 2.5-6 2.5-6S17 9 17 12a5 5 0 01-10 0c0-3 2.5-6 2.5-6S12 9 12 12z"/>,
+    wind: <><path d="M9.59 4.59A2 2 0 1111 8H2"/><path d="M12.59 19.41A2 2 0 1014 16H2"/><path d="M17.73 7.73A2.5 2.5 0 1119.5 12H2"/></>,
+    thermometer: <><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></>,
+    monitor: <><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></>,
+    zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+    iron: <><path d="M3 19h18M5 12l-2 7h18l-2-7"/><path d="M8 12V8a4 4 0 018 0v4"/></>,
+    camera: <><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }}>

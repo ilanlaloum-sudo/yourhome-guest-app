@@ -201,6 +201,7 @@ export const useSendMessage = () => {
           reservation_id: reservationId,
           guest_id: guestId,
           message_text: text,
+          system_prompt: 'You are the concierge at The Opus, Business Bay, Dubai. Respond in 2-3 sentences maximum. No bullet points, no lists. Be direct, warm, and actionable — like a luxury hotel concierge. Propose a concrete next step. Respond in the same language the guest uses.',
         },
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       })

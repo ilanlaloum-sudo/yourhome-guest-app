@@ -3,19 +3,24 @@ import Icon from '../ui/Icon'
 import Header from '../layout/Header'
 import { usePropertyPhotos, usePropertyAmenities, usePropertyKnowledge, usePropertyRules } from '../../hooks/useProperty'
 
+const AMENITY_ICONS = {
+  wifi: 'wifi', tv: 'tv', kitchen: 'utensils', pool: 'swim', gym: 'trophy',
+  parking: 'parking', ac: 'wind', heating: 'thermometer', washer: 'iron',
+  dryer: 'wind', iron: 'iron', coffee: 'coffee', bath: 'bath',
+  balcony: 'sun', safe: 'lock', camera: 'camera', default: 'sparkles',
+}
+
 const T = {
-  loading:    { fr: 'Chargement du logement...', en: 'Loading property...' },
-  title:      { fr: 'Votre logement',  en: 'Your property' },
-  wifi:       { fr: 'WiFi',            en: 'WiFi' },
-  access:     { fr: 'Accès & instructions', en: 'Access & instructions' },
-  amenities:  { fr: 'Équipements',     en: 'Amenities' },
-  rules:      { fr: 'Règles du logement', en: 'House rules' },
-  arrAfter:   { fr: 'Arrivée après',   en: 'Arrival after' },
-  depBefore:  { fr: 'Départ avant',    en: 'Departure before' },
-  noSmoking:  { fr: 'Non-fumeur',      en: 'No smoking' },
+  loading:    { fr: 'Chargement...', en: 'Loading...' },
+  floor:      { fr: '28e étage',     en: '28th floor' },
+  amenities:  { fr: 'Équipements',   en: 'Amenities' },
+  rules:      { fr: 'Règles',        en: 'Rules' },
+  arrAfter:   { fr: 'Arrivée après', en: 'Arrival after' },
+  depBefore:  { fr: 'Départ avant',  en: 'Departure before' },
+  noSmoking:  { fr: 'Non-fumeur',    en: 'No smoking' },
   noPets:     { fr: 'Animaux non admis', en: 'No pets' },
   noParties:  { fr: 'Fêtes non autorisées', en: 'No parties' },
-  nearby:     { fr: 'À proximité',     en: 'Nearby' },
+  nearby:     { fr: 'À proximité',   en: 'Nearby' },
   faq:        { fr: 'Questions fréquentes', en: 'FAQ' },
 }
 
@@ -30,8 +35,6 @@ export default function PropertyScreen({ reservation, lang = 'fr', onToggleLang,
   const { rules } = usePropertyRules(propertyId)
 
   const description = knowledge?.find(k => k.category === 'description')?.content || ''
-  const wifiEntry = knowledge?.find(k => k.category === 'wifi')
-  const accessEntries = knowledge?.filter(k => ['checkin', 'checkout', 'access'].includes(k.category)) || []
   const nearby = knowledge?.filter(k => k.category === 'nearby') || []
   const faqs = knowledge?.filter(k => k.category === 'faq') || []
 
@@ -55,20 +58,29 @@ export default function PropertyScreen({ reservation, lang = 'fr', onToggleLang,
     <div className="page">
       <Header lang={lang} onToggleLang={onToggleLang} session={session} onSignOut={onSignOut}/>
 
-      <div style={{ padding: '4px var(--px) 0' }}>
-        {photos.length > 0 ? (
-          <img
-            src={photos[activePhoto]?.url}
-            alt=""
-            style={{ width: '100%', height: 240, objectFit: 'cover', borderRadius: 'var(--r)' }}
-          />
-        ) : (
-          <div style={{ width: '100%', height: 240, borderRadius: 'var(--r)', background: 'linear-gradient(135deg, #2D2418, #1A1510)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="building" size={48} color="rgba(196,164,107,.3)" strokeWidth={1}/>
+      {/* Full-width hero with name overlay */}
+      <div style={{ position: 'relative', margin: '4px var(--px) 0' }}>
+        <div style={{ position: 'relative', height: 280, borderRadius: 'var(--r)', overflow: 'hidden' }}>
+          {photos.length > 0 ? (
+            <img src={photos[activePhoto]?.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #2D2418, #1A1510)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="building" size={48} color="rgba(196,164,107,.3)" strokeWidth={1}/>
+            </div>
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(15,10,5,.75) 0%, transparent 50%)' }}/>
+          <div style={{ position: 'absolute', bottom: 22, left: 22, right: 22 }}>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: '#fff', textShadow: '0 1px 8px rgba(0,0,0,.4)', marginBottom: 4 }}>
+              The Opus
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', fontWeight: 300, letterSpacing: 0.5 }}>
+              Business Bay · {t('floor', lang)}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
+      {/* Horizontal photo gallery */}
       {photos.length > 1 && (
         <div className="gscr">
           {photos.map((p, i) => (
@@ -83,69 +95,34 @@ export default function PropertyScreen({ reservation, lang = 'fr', onToggleLang,
         </div>
       )}
 
-      <div style={{ padding: '18px var(--px) 4px' }}>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 400 }}>
-          {t('title', lang)}
-        </h1>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, fontWeight: 300, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Icon name="mapPin" size={12} color="var(--muted)"/>
-            Dubai
-          </span>
-        </div>
-        {description && (
-          <p style={{ fontSize: 13, color: 'var(--sub)', lineHeight: 1.7, marginTop: 14, fontWeight: 300 }}>
+      {/* Editorial description */}
+      {description && (
+        <div style={{ padding: '24px var(--px) 8px' }}>
+          <p style={{ fontSize: 14, color: 'var(--sub)', lineHeight: 1.8, fontWeight: 300, fontStyle: 'italic' }}>
             {description}
           </p>
-        )}
-      </div>
-
-      {wifiEntry && (
-        <>
-          <div className="slbl">{t('wifi', lang)}</div>
-          <div className="ib" style={{ margin: '0 var(--px) 12px' }}>
-            <div className="ir">
-              <div className="iico"><Icon name="wifi" size={15} color="var(--gold-dk)"/></div>
-              <div style={{ flex: 1 }}>
-                <div className="ilbl">{wifiEntry.title}</div>
-                <div className="ival" style={{ fontSize: 16, fontWeight: 600, letterSpacing: 1 }}>{wifiEntry.content}</div>
-              </div>
-            </div>
-          </div>
-        </>
+        </div>
       )}
 
-      {accessEntries.length > 0 && (
-        <>
-          <div className="slbl">{t('access', lang)}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, padding: '0 var(--px) 12px' }}>
-            {accessEntries.map((a, i) => (
-              <div key={i} style={{ background: 'var(--card)', borderRadius: 'var(--r)', padding: '14px 15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <Icon name={a.category === 'checkin' ? 'key' : a.category === 'checkout' ? 'logOut' : 'lock'} size={14} color="var(--gold-dk)"/>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--sub)' }}>{a.title}</div>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, lineHeight: 1.6 }}>{a.content}</div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
+      {/* Amenities — larger chips with relevant icons */}
       {amenities.length > 0 && (
         <>
           <div className="slbl">{t('amenities', lang)}</div>
           <div className="agrid">
-            {amenities.map((a, i) => (
-              <div key={i} className="achip">
-                <Icon name={a.icon_key || 'sparkles'} size={14} color="var(--gold-dk)"/>
-                <span>{a.name}</span>
-              </div>
-            ))}
+            {amenities.map((a, i) => {
+              const iconKey = a.icon_key || Object.keys(AMENITY_ICONS).find(k => a.name?.toLowerCase().includes(k)) || 'default'
+              return (
+                <div key={i} className="achip">
+                  <Icon name={AMENITY_ICONS[iconKey] || AMENITY_ICONS.default} size={15} color="var(--gold-dk)"/>
+                  <span>{a.name}</span>
+                </div>
+              )
+            })}
           </div>
         </>
       )}
 
+      {/* House rules */}
       {rules && (
         <>
           <div className="slbl">{t('rules', lang)}</div>
@@ -184,20 +161,27 @@ export default function PropertyScreen({ reservation, lang = 'fr', onToggleLang,
         </>
       )}
 
+      {/* Nearby — horizontal cards with distance badges */}
       {nearby.length > 0 && (
         <>
           <div className="slbl">{t('nearby', lang)}</div>
-          <div className="ib" style={{ margin: '0 var(--px) 12px' }}>
+          <div style={{ display: 'flex', gap: 10, padding: '0 var(--px) 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {nearby.map((n, i) => (
-              <div key={i} className="ir">
-                <div className="iico"><Icon name="mapPin" size={15} color="var(--gold-dk)"/></div>
-                <div className="ival" style={{ flex: 1 }}>{n.title}</div>
+              <div key={i} className="ncard">
+                <div style={{ width: 36, height: 36, borderRadius: 12, background: 'rgba(196,164,107,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="mapPin" size={15} color="var(--gold-dk)"/>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', marginBottom: 2 }}>{n.title}</div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 300 }}>{n.content}</div>
+                </div>
               </div>
             ))}
           </div>
         </>
       )}
 
+      {/* FAQ */}
       {faqs.length > 0 && (
         <>
           <div className="slbl">{t('faq', lang)}</div>
