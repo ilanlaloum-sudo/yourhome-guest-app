@@ -25,9 +25,15 @@ export const useConversation = (reservationId, guestId) => {
           .eq('supabase_user_id', guestId)
           .maybeSingle()
 
-        const actualGuestId = guestRow?.id || guestId
+        const actualGuestId = guestRow?.id
         console.log('actualGuestId:', actualGuestId, '(from guests table:', !!guestRow, ')')
 
+        if (!actualGuestId) {
+          console.error('Could not resolve guest UUID from supabase_user_id:', guestId)
+          throw new Error('Guest not found for auth user ' + guestId)
+        }
+
+        console.log('querying conversations for guest:', actualGuestId)
         const { data, error: fetchErr } = await supabase
           .from('conversations')
           .select('*')
