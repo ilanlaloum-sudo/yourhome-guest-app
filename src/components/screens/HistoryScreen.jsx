@@ -4,6 +4,7 @@ import Header from '../layout/Header'
 import { useLoyaltyProfile, useRewards } from '../../hooks/useLoyalty'
 import { useReview, useSubmitReview } from '../../hooks/useReview'
 import { usePastReservations } from '../../hooks/useReservation'
+import { usePropertyKnowledge } from '../../hooks/useProperty'
 
 const fmtShort = (d) => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 
@@ -51,6 +52,9 @@ export default function HistoryScreen({ reservation, session, lang = 'fr', onTog
   const { reservations: past } = usePastReservations()
   const { review } = useReview(reservation?.id)
   const { submitReview, loading: submitting } = useSubmitReview()
+  const { knowledge } = usePropertyKnowledge(reservation?.property_id)
+
+  const propertyName = reservation?.property_name || knowledge?.find(k => k.category === 'description')?.title || 'The Opus'
 
   const handleSubmit = async () => {
     if (!rating) return
@@ -117,7 +121,7 @@ export default function HistoryScreen({ reservation, session, lang = 'fr', onTog
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 400 }}>
-                  {t('yourProp', lang)}
+                  {propertyName}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 300, marginTop: 2 }}>
                   {fmtShort(reservation.check_in_at)} - {fmtShort(reservation.check_out_at)}
@@ -148,7 +152,7 @@ export default function HistoryScreen({ reservation, session, lang = 'fr', onTog
                 <Icon name="building" size={36} color="rgba(196,164,107,.3)" strokeWidth={1}/>
               </div>
               <div className="stbd">
-                <div className="stn">{t('propYH', lang)}</div>
+                <div className="stn">{s.property_name || propertyName}</div>
                 <div className="stm">
                   <Icon name="mapPin" size={11} color="var(--muted)"/>
                   Dubai · {fmtShort(s.check_in_at)} - {fmtShort(s.check_out_at)}
@@ -182,7 +186,7 @@ export default function HistoryScreen({ reservation, session, lang = 'fr', onTog
             <div style={{ textAlign: 'center' }}>
               <div className="mtit">{t('yourReview', lang)}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, fontWeight: 300 }}>
-                {t('yourPropYH', lang)}
+                {propertyName}
               </div>
               <div className="srat">
                 {[1, 2, 3, 4, 5].map(n => (

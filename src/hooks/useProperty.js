@@ -75,7 +75,9 @@ export const usePropertyPhotos = (propertyId) => {
           .order('display_order', { ascending: true })
 
         if (error) throw error
-        setPhotos(data || [])
+        const COVER_URL = 'https://qscbpmqqcbjuobhwlcmw.supabase.co/storage/v1/object/public/property-images/the-opus.jpg'
+        const results = data && data.length > 0 ? data : [{ url: COVER_URL, id: 'cover-fallback' }]
+        setPhotos(results)
       } catch (err) {
         console.error(err)
       } finally {

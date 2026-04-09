@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Icon from '../ui/Icon'
 import Header from '../layout/Header'
 import { useServices, useCreateServiceRequest } from '../../hooks/useServices'
+import { fixAccents } from '../../lib/frenchAccents'
 
 const ICON_MAP = {
   'Arrivée':     'plane',
@@ -117,8 +118,8 @@ export default function ServicesScreen({ reservation, lang = 'fr', onToggleLang,
                 />
               </div>
               <div className="sbod">
-                <div className="sn">{lang === 'fr' ? svc.service?.name_fr : (svc.service?.name_en || svc.service?.name_fr)}</div>
-                <div className="sd">{lang === 'fr' ? svc.service?.description_fr : (svc.service?.description_en || svc.service?.description_fr)}</div>
+                <div className="sn">{lang === 'fr' ? fixAccents(svc.service?.name_fr) : (svc.service?.name_en || fixAccents(svc.service?.name_fr))}</div>
+                <div className="sd">{lang === 'fr' ? fixAccents(svc.service?.description_fr) : (svc.service?.description_en || fixAccents(svc.service?.description_fr))}</div>
                 <div className="sf">
                   <div className="sp">{getPrice(svc)}</div>
                   {done.includes(svc.id)
@@ -143,9 +144,9 @@ export default function ServicesScreen({ reservation, lang = 'fr', onToggleLang,
             <div style={{ width: 56, height: 56, borderRadius: 18, background: 'rgba(196,164,107,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <Icon name={ICON_MAP[selected.service?.category] || 'sparkles'} size={26} color="var(--gold-dk)" strokeWidth={1.3}/>
             </div>
-            <div className="mtit">{lang === 'fr' ? selected.service?.name_fr : (selected.service?.name_en || selected.service?.name_fr)}</div>
+            <div className="mtit">{lang === 'fr' ? fixAccents(selected.service?.name_fr) : (selected.service?.name_en || fixAccents(selected.service?.name_fr))}</div>
             <div className="mpr">{getPrice(selected)}</div>
-            <div className="mds">{lang === 'fr' ? selected.service?.description_fr : (selected.service?.description_en || selected.service?.description_fr)}</div>
+            <div className="mds">{lang === 'fr' ? fixAccents(selected.service?.description_fr) : (selected.service?.description_en || fixAccents(selected.service?.description_fr))}</div>
             {done.includes(selected.id)
               ? <div style={{ textAlign: 'center', padding: 14, color: 'var(--green)', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <Icon name="check" size={15} color="var(--green)"/> {t('sent', lang)}

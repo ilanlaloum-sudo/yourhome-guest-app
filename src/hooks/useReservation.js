@@ -27,7 +27,8 @@ export const useActiveReservation = () => {
             .eq('is_cover', true)
             .single()
 
-          setReservation({ ...data, cover_photo_url: photos?.url || null })
+          const coverUrl = photos?.url || 'https://qscbpmqqcbjuobhwlcmw.supabase.co/storage/v1/object/public/property-images/the-opus.jpg'
+          setReservation({ ...data, cover_photo_url: coverUrl })
         } else {
           setReservation(data)
         }

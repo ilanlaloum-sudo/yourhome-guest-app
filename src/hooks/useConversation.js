@@ -136,8 +136,19 @@ export const useMessages = (conversationId) => {
         },
         (payload) => {
           setMessages((prev) => {
-            if (prev.some((m) => m.id === payload.new.id)) return prev
-            return [...prev, payload.new]
+            const incoming = payload.new
+            // Skip if already exists by DB id
+            if (prev.some((m) => m.id === incoming.id)) return prev
+            // Replace optimistic message with the real DB version (match by content_text + direction)
+            const optIdx = prev.findIndex(
+              (m) => String(m.id).startsWith('opt-') && m.content_text === incoming.content_text && m.direction === incoming.direction
+            )
+            if (optIdx !== -1) {
+              const updated = [...prev]
+              updated[optIdx] = incoming
+              return updated
+            }
+            return [...prev, incoming]
           })
         }
       )
