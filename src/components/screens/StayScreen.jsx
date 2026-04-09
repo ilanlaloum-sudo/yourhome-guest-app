@@ -40,7 +40,7 @@ const copyToClipboard = (text) => {
   navigator.clipboard?.writeText(text).catch(() => {})
 }
 
-export default function StayScreen({ reservation, lang = 'fr', onToggleLang, session, onSignOut }) {
+export default function StayScreen({ reservation, lang = 'fr', onToggleLang, session, onSignOut, onNavigate }) {
   const [copied, setCopied] = useState(null)
   const { rules } = usePropertyRules(reservation?.property_id)
   const { knowledge } = usePropertyKnowledge(reservation?.property_id)
@@ -238,7 +238,10 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
 
       {/* Late check-out */}
       <div style={{ padding: '12px var(--px)' }}>
-        <button className="btn-o" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <button className="btn-o" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => {
+          localStorage.setItem('prefilled_message', lang === 'fr' ? 'Bonjour, je souhaite demander un late check-out. Est-ce possible ?' : 'Hello, I would like to request a late check-out. Is it possible?')
+          onNavigate?.(4)
+        }}>
           <Icon name="moon" size={14} color="var(--gold-dk)"/> {t('lateCheckout', lang)}
         </button>
       </div>

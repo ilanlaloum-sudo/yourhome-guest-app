@@ -50,7 +50,7 @@ export default function App() {
 
   const screens = [
     <HomeScreen reservation={reservation} onNavigate={setActiveTab} {...commonProps}/>,
-    <StayScreen reservation={reservation} {...commonProps}/>,
+    <StayScreen reservation={reservation} onNavigate={setActiveTab} {...commonProps}/>,
     <PropertyScreen reservation={reservation} {...commonProps}/>,
     <ServicesScreen reservation={reservation} {...commonProps}/>,
     <AssistantScreen reservation={reservation} {...commonProps}/>,
