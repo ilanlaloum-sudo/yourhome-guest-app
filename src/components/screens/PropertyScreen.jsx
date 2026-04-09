@@ -3,7 +3,25 @@ import Icon from '../ui/Icon'
 import Header from '../layout/Header'
 import { usePropertyPhotos, usePropertyAmenities, usePropertyKnowledge, usePropertyRules } from '../../hooks/useProperty'
 
-export default function PropertyScreen({ reservation }) {
+const T = {
+  loading:    { fr: 'Chargement du logement...', en: 'Loading property...' },
+  title:      { fr: 'Votre logement',  en: 'Your property' },
+  wifi:       { fr: 'WiFi',            en: 'WiFi' },
+  access:     { fr: 'Accès & instructions', en: 'Access & instructions' },
+  amenities:  { fr: 'Équipements',     en: 'Amenities' },
+  rules:      { fr: 'Règles du logement', en: 'House rules' },
+  arrAfter:   { fr: 'Arrivée après',   en: 'Arrival after' },
+  depBefore:  { fr: 'Départ avant',    en: 'Departure before' },
+  noSmoking:  { fr: 'Non-fumeur',      en: 'No smoking' },
+  noPets:     { fr: 'Animaux non admis', en: 'No pets' },
+  noParties:  { fr: 'Fêtes non autorisées', en: 'No parties' },
+  nearby:     { fr: 'À proximité',     en: 'Nearby' },
+  faq:        { fr: 'Questions fréquentes', en: 'FAQ' },
+}
+
+const t = (key, lang) => T[key]?.[lang] || T[key]?.fr || key
+
+export default function PropertyScreen({ reservation, lang = 'fr', onToggleLang, session, onSignOut }) {
   const [activePhoto, setActivePhoto] = useState(0)
   const propertyId = reservation?.property_id
   const { photos } = usePropertyPhotos(propertyId)
@@ -20,14 +38,14 @@ export default function PropertyScreen({ reservation }) {
   if (!reservation || !propertyId) {
     return (
       <div className="page">
-        <Header/>
+        <Header lang={lang} onToggleLang={onToggleLang} session={session} onSignOut={onSignOut}/>
         <div style={{ padding: '60px var(--px)', textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
             {[0, 1, 2].map(i => (
               <div key={i} className="dot" style={{ animation: `bounce 1s ${i * 0.2}s infinite` }}/>
             ))}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 300 }}>Chargement du logement...</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 300 }}>{t('loading', lang)}</div>
         </div>
       </div>
     )
@@ -35,7 +53,7 @@ export default function PropertyScreen({ reservation }) {
 
   return (
     <div className="page">
-      <Header/>
+      <Header lang={lang} onToggleLang={onToggleLang} session={session} onSignOut={onSignOut}/>
 
       <div style={{ padding: '4px var(--px) 0' }}>
         {photos.length > 0 ? (
@@ -67,7 +85,7 @@ export default function PropertyScreen({ reservation }) {
 
       <div style={{ padding: '18px var(--px) 4px' }}>
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 400 }}>
-          Votre logement
+          {t('title', lang)}
         </h1>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, fontWeight: 300, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -84,7 +102,7 @@ export default function PropertyScreen({ reservation }) {
 
       {wifiEntry && (
         <>
-          <div className="slbl">WiFi</div>
+          <div className="slbl">{t('wifi', lang)}</div>
           <div className="ib" style={{ margin: '0 var(--px) 12px' }}>
             <div className="ir">
               <div className="iico"><Icon name="wifi" size={15} color="var(--gold-dk)"/></div>
@@ -99,7 +117,7 @@ export default function PropertyScreen({ reservation }) {
 
       {accessEntries.length > 0 && (
         <>
-          <div className="slbl">Acces & instructions</div>
+          <div className="slbl">{t('access', lang)}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, padding: '0 var(--px) 12px' }}>
             {accessEntries.map((a, i) => (
               <div key={i} style={{ background: 'var(--card)', borderRadius: 'var(--r)', padding: '14px 15px' }}>
@@ -116,7 +134,7 @@ export default function PropertyScreen({ reservation }) {
 
       {amenities.length > 0 && (
         <>
-          <div className="slbl">Equipements</div>
+          <div className="slbl">{t('amenities', lang)}</div>
           <div className="agrid">
             {amenities.map((a, i) => (
               <div key={i} className="achip">
@@ -130,36 +148,36 @@ export default function PropertyScreen({ reservation }) {
 
       {rules && (
         <>
-          <div className="slbl">Regles du logement</div>
+          <div className="slbl">{t('rules', lang)}</div>
           <div className="ib">
             {rules.checkin_time && (
               <div className="ir">
                 <div className="iico"><Icon name="clock" size={15} color="var(--gold-dk)"/></div>
-                <div className="ival">Arrivee apres {rules.checkin_time}</div>
+                <div className="ival">{t('arrAfter', lang)} {rules.checkin_time}</div>
               </div>
             )}
             {rules.checkout_time && (
               <div className="ir">
                 <div className="iico"><Icon name="logOut" size={15} color="var(--gold-dk)"/></div>
-                <div className="ival">Depart avant {rules.checkout_time}</div>
+                <div className="ival">{t('depBefore', lang)} {rules.checkout_time}</div>
               </div>
             )}
             {rules.smoking_allowed === false && (
               <div className="ir">
                 <div className="iico"><Icon name="smoke" size={15} color="var(--gold-dk)"/></div>
-                <div className="ival">Non-fumeur</div>
+                <div className="ival">{t('noSmoking', lang)}</div>
               </div>
             )}
             {rules.pets_allowed === false && (
               <div className="ir">
                 <div className="iico"><Icon name="paw" size={15} color="var(--gold-dk)"/></div>
-                <div className="ival">Animaux non admis</div>
+                <div className="ival">{t('noPets', lang)}</div>
               </div>
             )}
             {rules.parties_allowed === false && (
               <div className="ir">
                 <div className="iico"><Icon name="slash" size={15} color="var(--gold-dk)"/></div>
-                <div className="ival">Fetes non autorisees</div>
+                <div className="ival">{t('noParties', lang)}</div>
               </div>
             )}
           </div>
@@ -168,7 +186,7 @@ export default function PropertyScreen({ reservation }) {
 
       {nearby.length > 0 && (
         <>
-          <div className="slbl">A proximite</div>
+          <div className="slbl">{t('nearby', lang)}</div>
           <div className="ib" style={{ margin: '0 var(--px) 12px' }}>
             {nearby.map((n, i) => (
               <div key={i} className="ir">
@@ -182,7 +200,7 @@ export default function PropertyScreen({ reservation }) {
 
       {faqs.length > 0 && (
         <>
-          <div className="slbl">Questions frequentes</div>
+          <div className="slbl">{t('faq', lang)}</div>
           <div className="ib" style={{ margin: '0 var(--px) 12px' }}>
             {faqs.map((f, i) => (
               <div key={i} className="ir">

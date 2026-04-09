@@ -4,22 +4,39 @@ import Header from '../layout/Header'
 import { useServices, useCreateServiceRequest } from '../../hooks/useServices'
 
 const ICON_MAP = {
-  'Arrivee':     'plane',
+  'Arrivée':     'plane',
   'Confort':     'sparkles',
   'Famille':     'heart',
-  'Experiences': 'flower',
-  'Mobilite':    'car',
+  'Expériences': 'flower',
+  'Mobilité':    'car',
 }
 
-export default function ServicesScreen({ reservation }) {
+const T = {
+  title:      { fr: 'Services',   en: 'Services' },
+  subtitle:   { fr: 'Un accompagnement premium à chaque étape', en: 'Premium support at every step' },
+  all:        { fr: 'Tous',       en: 'All' },
+  noService:  { fr: 'Aucun service disponible pour ce bien.', en: 'No services available for this property.' },
+  included:   { fr: 'Inclus',     en: 'Included' },
+  onRequest:  { fr: 'Sur demande', en: 'On request' },
+  request:    { fr: 'Demande',    en: 'Request' },
+  paid:       { fr: 'Payant',     en: 'Paid' },
+  sent:       { fr: 'Demande envoyée', en: 'Request sent' },
+  orderBtn:   { fr: 'Demander ce service', en: 'Request this service' },
+  sendingBtn: { fr: 'Envoi...',   en: 'Sending...' },
+  close:      { fr: 'Fermer',    en: 'Close' },
+}
+
+const t = (key, lang) => T[key]?.[lang] || T[key]?.fr || key
+
+export default function ServicesScreen({ reservation, lang = 'fr', onToggleLang, session, onSignOut }) {
   const [cat, setCat] = useState('Tous')
   const [selected, setSelected] = useState(null)
   const [done, setDone] = useState([])
   const { services, loading } = useServices(reservation?.property_id)
   const { createRequest, loading: creating } = useCreateServiceRequest()
 
-  const cats = ['Tous', ...Array.from(new Set(services.map(s => s.service?.category || 'Autre')))]
-  const filtered = cat === 'Tous'
+  const cats = [lang === 'fr' ? 'Tous' : 'All', ...Array.from(new Set(services.map(s => s.service?.category || 'Autre')))]
+  const filtered = (cat === 'Tous' || cat === 'All')
     ? services
     : services.filter(s => (s.service?.category || 'Autre') === cat)
 
@@ -41,10 +58,10 @@ export default function ServicesScreen({ reservation }) {
   const getPrice = (svc) => {
     const price = svc.custom_price_eur || svc.service?.base_price_eur
     const type = svc.service?.pricing_type
-    if (type === 'free') return 'Inclus'
-    if (type === 'on_request') return 'Sur demande'
+    if (type === 'free') return t('included', lang)
+    if (type === 'on_request') return t('onRequest', lang)
     if (price) return 'EUR ' + price
-    return 'Sur demande'
+    return t('onRequest', lang)
   }
 
   const getType = (svc) => {
@@ -57,7 +74,7 @@ export default function ServicesScreen({ reservation }) {
   if (loading) {
     return (
       <div className="page">
-        <Header/>
+        <Header lang={lang} onToggleLang={onToggleLang} session={session} onSignOut={onSignOut}/>
         <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0', gap: 8 }}>
           {[0, 1, 2].map(i => (
             <div key={i} className="dot" style={{ animation: `bounce 1s ${i * 0.2}s infinite` }}/>
@@ -69,9 +86,9 @@ export default function ServicesScreen({ reservation }) {
 
   return (
     <div className="page">
-      <Header/>
-      <div className="ptitle">Services</div>
-      <div className="psub">Un accompagnement premium a chaque etape</div>
+      <Header lang={lang} onToggleLang={onToggleLang} session={session} onSignOut={onSignOut}/>
+      <div className="ptitle">{t('title', lang)}</div>
+      <div className="psub">{t('subtitle', lang)}</div>
 
       <div className="ctabs">
         {cats.map(c => (
@@ -84,7 +101,7 @@ export default function ServicesScreen({ reservation }) {
       {filtered.length === 0 ? (
         <div style={{ padding: '40px var(--px)', textAlign: 'center' }}>
           <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 300 }}>
-            Aucun service disponible pour ce bien.
+            {t('noService', lang)}
           </div>
         </div>
       ) : (
@@ -100,8 +117,8 @@ export default function ServicesScreen({ reservation }) {
                 />
               </div>
               <div className="sbod">
-                <div className="sn">{svc.service?.name_fr}</div>
-                <div className="sd">{svc.service?.description_fr}</div>
+                <div className="sn">{lang === 'fr' ? svc.service?.name_fr : (svc.service?.name_en || svc.service?.name_fr)}</div>
+                <div className="sd">{lang === 'fr' ? svc.service?.description_fr : (svc.service?.description_en || svc.service?.description_fr)}</div>
                 <div className="sf">
                   <div className="sp">{getPrice(svc)}</div>
                   {done.includes(svc.id)
@@ -109,7 +126,7 @@ export default function ServicesScreen({ reservation }) {
                         <Icon name="check" size={9} color="var(--green)"/>OK
                       </div>
                     : <div className={`sbg ${getType(svc)}`}>
-                        {getType(svc) === 'included' ? 'Inclus' : getType(svc) === 'req' ? 'Demande' : 'Payant'}
+                        {getType(svc) === 'included' ? t('included', lang) : getType(svc) === 'req' ? t('request', lang) : t('paid', lang)}
                       </div>
                   }
                 </div>
@@ -126,20 +143,20 @@ export default function ServicesScreen({ reservation }) {
             <div style={{ width: 56, height: 56, borderRadius: 18, background: 'rgba(196,164,107,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <Icon name={ICON_MAP[selected.service?.category] || 'sparkles'} size={26} color="var(--gold-dk)" strokeWidth={1.3}/>
             </div>
-            <div className="mtit">{selected.service?.name_fr}</div>
+            <div className="mtit">{lang === 'fr' ? selected.service?.name_fr : (selected.service?.name_en || selected.service?.name_fr)}</div>
             <div className="mpr">{getPrice(selected)}</div>
-            <div className="mds">{selected.service?.description_fr}</div>
+            <div className="mds">{lang === 'fr' ? selected.service?.description_fr : (selected.service?.description_en || selected.service?.description_fr)}</div>
             {done.includes(selected.id)
               ? <div style={{ textAlign: 'center', padding: 14, color: 'var(--green)', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Icon name="check" size={15} color="var(--green)"/> Demande envoyee
+                  <Icon name="check" size={15} color="var(--green)"/> {t('sent', lang)}
                 </div>
               : <button className="btn-p" onClick={() => handleOrder(selected)} disabled={creating}>
                   <Icon name="concierge" size={14} color="#fff"/>
-                  {creating ? 'Envoi...' : 'Demander ce service'}
+                  {creating ? t('sendingBtn', lang) : t('orderBtn', lang)}
                 </button>
             }
             <button className="btn-o" style={{ marginTop: 10 }} onClick={() => setSelected(null)}>
-              Fermer
+              {t('close', lang)}
             </button>
           </div>
         </div>

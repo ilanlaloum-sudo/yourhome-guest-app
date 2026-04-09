@@ -4,18 +4,42 @@ import Header from '../layout/Header'
 import { useConversation, useMessages, useSendMessage } from '../../hooks/useConversation'
 import { supabase } from '../../lib/supabase'
 
-const CHIPS = [
-  { i: 'key',          l: 'Arrivee' },
-  { i: 'wifi',         l: 'WiFi' },
-  { i: 'parking',      l: 'Parking' },
-  { i: 'concierge',    l: 'Service' },
-  { i: 'logOut',       l: 'Check-out' },
-  { i: 'alert',        l: 'Probleme' },
-  { i: 'utensils',     l: 'Restaurant' },
-  { i: 'mapPin',       l: 'Quartier' },
-]
+const CHIPS = {
+  fr: [
+    { i: 'key',          l: 'Arrivée' },
+    { i: 'wifi',         l: 'WiFi' },
+    { i: 'parking',      l: 'Parking' },
+    { i: 'concierge',    l: 'Service' },
+    { i: 'logOut',       l: 'Check-out' },
+    { i: 'alert',        l: 'Problème' },
+    { i: 'utensils',     l: 'Restaurant' },
+    { i: 'mapPin',       l: 'Quartier' },
+  ],
+  en: [
+    { i: 'key',          l: 'Arrival' },
+    { i: 'wifi',         l: 'WiFi' },
+    { i: 'parking',      l: 'Parking' },
+    { i: 'concierge',    l: 'Service' },
+    { i: 'logOut',       l: 'Check-out' },
+    { i: 'alert',        l: 'Issue' },
+    { i: 'utensils',     l: 'Restaurant' },
+    { i: 'mapPin',       l: 'Neighbourhood' },
+  ],
+}
 
-export default function AssistantScreen({ reservation, session }) {
+const T = {
+  title:      { fr: 'Assistant Your Home',  en: 'Your Home Assistant' },
+  subtitle:   { fr: 'Concierge premium disponible 24h/24', en: 'Premium concierge available 24/7' },
+  online:     { fr: 'En ligne',   en: 'Online' },
+  loadErr:    { fr: 'Impossible de charger la conversation.', en: 'Unable to load conversation.' },
+  retry:      { fr: 'Réessayer',  en: 'Retry' },
+  greeting:   { fr: 'Bonjour ! Je suis votre assistant Your Home. Comment puis-je vous aider ?', en: 'Hello! I\'m your Your Home assistant. How can I help you?' },
+  placeholder:{ fr: 'Posez votre question...', en: 'Ask your question...' },
+}
+
+const t = (key, lang) => T[key]?.[lang] || T[key]?.fr || key
+
+export default function AssistantScreen({ reservation, session, lang = 'fr', onToggleLang, onSignOut }) {
   const [input, setInput] = useState('')
   const [convError, setConvError] = useState(false)
   const ref = useRef(null)
@@ -54,12 +78,18 @@ export default function AssistantScreen({ reservation, session }) {
 
   return (
     <div className="page" style={{ paddingBottom: 160 }}>
-      <Header right={
-        <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }}/>
-          En ligne
-        </div>
-      }/>
+      <Header
+        lang={lang}
+        onToggleLang={onToggleLang}
+        session={session}
+        onSignOut={onSignOut}
+        right={
+          <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }}/>
+            {t('online', lang)}
+          </div>
+        }
+      />
 
       <div style={{ padding: '8px var(--px) 14px' }}>
         <div style={{ background: 'var(--card)', borderRadius: 'var(--r)', padding: '15px 17px', display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -67,16 +97,16 @@ export default function AssistantScreen({ reservation, session }) {
             <Icon name="sparkles" size={20} color="#fff" strokeWidth={1.5}/>
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>Assistant Your Home</div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{t('title', lang)}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 300 }}>
-              Concierge premium disponible 24h/24
+              {t('subtitle', lang)}
             </div>
           </div>
         </div>
       </div>
 
       <div className="chips">
-        {CHIPS.map(s => (
+        {(CHIPS[lang] || CHIPS.fr).map(s => (
           <div key={s.l} className="chip" onClick={() => handleSend(s.l)}>
             <Icon name={s.i} size={13}/>
             <span>{s.l}</span>
@@ -86,12 +116,12 @@ export default function AssistantScreen({ reservation, session }) {
 
       {convError && (
         <div style={{ padding: '20px var(--px)', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>Impossible de charger la conversation.</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>{t('loadErr', lang)}</div>
           <button
-            onClick={() => { setConvError(false); setRetryKey(k => k + 1); window.location.reload() }}
+            onClick={() => { setConvError(false); window.location.reload() }}
             style={{ background: 'var(--gold)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
-            Reessayer
+            {t('retry', lang)}
           </button>
         </div>
       )}
@@ -107,14 +137,14 @@ export default function AssistantScreen({ reservation, session }) {
           <div style={{ alignSelf: 'flex-start' }}>
             <div className="bsndr">Assistant</div>
             <div className="bbl ai">
-              Bonjour ! Je suis votre assistant Your Home. Comment puis-je vous aider ?
+              {t('greeting', lang)}
             </div>
           </div>
         ) : (
           messages.map((m, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'guest' ? 'flex-end' : 'flex-start' }}>
-              {m.role !== 'guest' && <div className="bsndr">Assistant</div>}
-              <div className={`bbl ${m.role === 'guest' ? 'usr' : 'ai'}`}>
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.direction === 'outgoing' ? 'flex-end' : 'flex-start' }}>
+              {m.direction !== 'outgoing' && <div className="bsndr">Assistant</div>}
+              <div className={`bbl ${m.direction === 'outgoing' ? 'usr' : 'ai'}`}>
                 {m.content_text}
               </div>
             </div>
@@ -137,7 +167,7 @@ export default function AssistantScreen({ reservation, session }) {
       <div className="cbar">
         <input
           className="cinp"
-          placeholder="Posez votre question..."
+          placeholder={t('placeholder', lang)}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend(input)}

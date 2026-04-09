@@ -140,12 +140,9 @@ export const useSendMessage = () => {
       await supabase.from('messages').insert({
         conversation_id: conversationId,
         direction: 'outgoing',
-        topic: 'default',
         role: 'user',
-        extension: 'text',
         message_type: 'text',
         content_text: text,
-        created_at: new Date().toISOString(),
       })
 
       const { data, error: fnError } = await supabase.functions.invoke('ai-concierge', {
@@ -160,16 +157,15 @@ export const useSendMessage = () => {
 
       if (fnError) throw fnError
 
-      if (data?.reply) {
+      console.log('ai-concierge response:', JSON.stringify(data))
+      const replyText = data?.reply || data?.message
+      if (replyText) {
         await supabase.from('messages').insert({
           conversation_id: conversationId,
           direction: 'incoming',
-          topic: 'default',
           role: 'assistant',
-          extension: 'text',
           message_type: 'text',
-          content_text: data.reply,
-          created_at: new Date().toISOString(),
+          content_text: replyText,
         })
       }
     } catch (err) {

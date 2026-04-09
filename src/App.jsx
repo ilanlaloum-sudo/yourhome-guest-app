@@ -11,9 +11,12 @@ import AssistantScreen from './components/screens/AssistantScreen'
 import HistoryScreen from './components/screens/HistoryScreen'
 
 export default function App() {
-  const { session, loading: authLoading } = useAuth()
+  const { session, loading: authLoading, signOut } = useAuth()
   const { reservation, loading: resLoading } = useActiveReservation()
   const [activeTab, setActiveTab] = useState(0)
+  const [lang, setLang] = useState('fr')
+
+  const toggleLang = () => setLang(l => l === 'fr' ? 'en' : 'fr')
 
   if (authLoading) {
     return (
@@ -28,7 +31,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <LoginScreen/>
+    return <LoginScreen lang={lang} onToggleLang={toggleLang}/>
   }
 
   if (resLoading) {
@@ -43,13 +46,15 @@ export default function App() {
     )
   }
 
+  const commonProps = { lang, onToggleLang: toggleLang, session, onSignOut: signOut }
+
   const screens = [
-    <HomeScreen reservation={reservation} onNavigate={setActiveTab}/>,
-    <StayScreen reservation={reservation}/>,
-    <PropertyScreen reservation={reservation}/>,
-    <ServicesScreen reservation={reservation}/>,
-    <AssistantScreen reservation={reservation} session={session}/>,
-    <HistoryScreen reservation={reservation} session={session}/>,
+    <HomeScreen reservation={reservation} onNavigate={setActiveTab} {...commonProps}/>,
+    <StayScreen reservation={reservation} {...commonProps}/>,
+    <PropertyScreen reservation={reservation} {...commonProps}/>,
+    <ServicesScreen reservation={reservation} {...commonProps}/>,
+    <AssistantScreen reservation={reservation} {...commonProps}/>,
+    <HistoryScreen reservation={reservation} {...commonProps}/>,
   ]
 
   return (
@@ -57,7 +62,7 @@ export default function App() {
       <div style={{ overflowY: 'auto', height: '100vh' }}>
         {screens[activeTab]}
       </div>
-      <BottomNav activeTab={activeTab} onNavigate={setActiveTab}/>
+      <BottomNav activeTab={activeTab} onNavigate={setActiveTab} lang={lang}/>
     </div>
   )
 }
