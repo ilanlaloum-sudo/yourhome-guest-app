@@ -16,14 +16,24 @@ export const useConversation = (reservationId, guestId) => {
 
     const init = async () => {
       try {
-        console.log('useConversation init — guestId (supabase uid):', guestId, 'reservationId:', reservationId)
+        // Ensure we have a valid session
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          throw new Error('Not authenticated')
+        }
+        console.log('useConversation init — session uid:', session.user.id, 'reservationId:', reservationId)
 
         // Resolve actual guest UUID from guests table
-        const { data: guestRow } = await supabase
+        const { data: guestRow, error: guestErr } = await supabase
           .from('guests')
           .select('id')
-          .eq('supabase_user_id', guestId)
+          .eq('supabase_user_id', session.user.id)
           .maybeSingle()
+
+        if (guestErr) {
+          console.error('guest lookup error:', guestErr.message, guestErr.code)
+          throw guestErr
+        }
 
         const actualGuestId = guestRow?.id
         console.log('actualGuestId:', actualGuestId, '(from guests table:', !!guestRow, ')')
