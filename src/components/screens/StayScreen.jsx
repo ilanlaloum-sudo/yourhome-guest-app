@@ -142,8 +142,7 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
       </div>
 
       {/* Access Code */}
-      <div className="slbl">{t('accessCode', lang)}</div>
-      <div style={{ margin: '0 var(--px) 10px', background: '#fff', borderRadius: 12, padding: 16, border: '1px solid rgba(196,164,107,.15)' }}>
+      <div style={{ marginTop: 22, margin: '22px var(--px) 10px', background: '#fff', borderRadius: 12, padding: 16, border: '1px solid rgba(196,164,107,.15)' }}>
         {codesVisible ? (
           <>
             <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 10 }}>
@@ -175,7 +174,6 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
       </div>
 
       {/* WiFi */}
-      <div className="slbl">{t('wifi', lang)}</div>
       <div style={{ margin: '0 var(--px) 10px', background: '#fff', borderRadius: 12, padding: 16, border: '1px solid rgba(196,164,107,.15)' }}>
         {codesVisible ? (
           <>
@@ -205,7 +203,6 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
       </div>
 
       {/* Parking */}
-      <div className="slbl">{t('parking', lang)}</div>
       <div style={{ margin: '0 var(--px) 10px', background: '#fff', borderRadius: 12, padding: 16, border: '1px solid rgba(196,164,107,.15)' }}>
         {codesVisible ? (
           <>
