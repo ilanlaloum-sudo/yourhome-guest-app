@@ -141,90 +141,93 @@ export default function StayScreen({ reservation, lang = 'fr', onToggleLang, ses
 
       {/* Access Code */}
       <div className="slbl">{t('accessCode', lang)}</div>
-      <div style={{ margin: '0 var(--px) 12px', background: 'var(--card)', borderRadius: 16, padding: 20, border: '1px solid rgba(196,164,107,.2)' }}>
+      <div style={{ margin: '0 var(--px) 10px', background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid rgba(196,164,107,.2)' }}>
         {codesVisible ? (
           <>
-            <div style={{ fontSize: 11, letterSpacing: 2, color: 'var(--gold-dk)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
               {t('accessCode', lang)}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--sub)', fontWeight: 300, marginBottom: 14, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12, color: '#8B7355', fontWeight: 300, marginBottom: 10 }}>
               Niveau P1 · Appartement 2804
             </div>
-            <div style={{ height: 1, background: 'var(--bd)', marginBottom: 14 }}/>
+            <div style={{ height: 1, background: 'rgba(196,164,107,.15)', margin: 0, marginBottom: 10 }}/>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: 'var(--gold-dk)', letterSpacing: '0.15em' }}>
+              <div style={{ fontSize: 22, fontWeight: 400, color: '#2C2416', letterSpacing: '0.08em', lineHeight: 1.3 }}>
                 {accessCode}
               </div>
               <button className="code-copy" onClick={() => handleCopy(accessCode, 'code')} style={{ marginTop: 0 }}>
-                <Icon name="copy" size={12} color="var(--gold)"/>
+                <Icon name="copy" size={16} color="var(--gold)"/>
                 {copied === 'code' ? t('copied', lang) : ''}
               </button>
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center' }}>
-            <Icon name="lock" size={18} color="var(--muted)" style={{ marginBottom: 8 }}/>
-            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 8 }}>{lockedMsg}</div>
+          <div style={{ textAlign: 'center', padding: '4px 0' }}>
+            <Icon name="lock" size={16} color="var(--muted)"/>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
           </div>
         )}
       </div>
 
       {/* WiFi */}
       <div className="slbl">{t('wifi', lang)}</div>
-      <div style={{ margin: '0 var(--px) 12px', background: 'var(--card)', borderRadius: 16, padding: 20, border: '1px solid rgba(196,164,107,.2)' }}>
+      <div style={{ margin: '0 var(--px) 10px', background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid rgba(196,164,107,.2)' }}>
         {codesVisible ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
-              <div style={{ fontSize: 11, letterSpacing: 2, color: 'var(--gold-dk)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
+              <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>
                 {t('network', lang)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{wifiNetwork}</div>
+                <div style={{ fontSize: 12, color: '#8B7355', fontWeight: 400 }}>{wifiNetwork}</div>
                 <button className="code-copy" onClick={() => handleCopy(wifiNetwork, 'ssid')} style={{ marginTop: 0 }}>
-                  <Icon name="copy" size={12} color="var(--gold)"/>
+                  <Icon name="copy" size={16} color="var(--gold)"/>
                   {copied === 'ssid' ? t('copied', lang) : ''}
                 </button>
               </div>
             </div>
-            <div style={{ height: 1, background: 'var(--bd)' }}/>
+            <div style={{ height: 1, background: 'rgba(196,164,107,.15)' }}/>
             <div>
-              <div style={{ fontSize: 11, letterSpacing: 2, color: 'var(--gold-dk)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
+              <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>
                 {t('password', lang)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 400, color: 'var(--text)', letterSpacing: '0.1em' }}>{wifiPassword}</div>
+                <div style={{ fontSize: 18, fontWeight: 400, color: '#2C2416', letterSpacing: '0.06em' }}>{wifiPassword}</div>
                 <button className="code-copy" onClick={() => handleCopy(wifiPassword, 'pass')} style={{ marginTop: 0 }}>
-                  <Icon name="copy" size={12} color="var(--gold)"/>
+                  <Icon name="copy" size={16} color="var(--gold)"/>
                   {copied === 'pass' ? t('copied', lang) : ''}
                 </button>
               </div>
             </div>
           </div>
         ) : (
-          <div style={{ textAlign: 'center' }}>
-            <Icon name="lock" size={18} color="var(--muted)"/>
-            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 8 }}>{lockedMsg}</div>
+          <div style={{ textAlign: 'center', padding: '4px 0' }}>
+            <Icon name="lock" size={16} color="var(--muted)"/>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
           </div>
         )}
       </div>
 
       {/* Parking */}
       <div className="slbl">{t('parking', lang)}</div>
-      <div className="code-card">
+      <div style={{ margin: '0 var(--px) 10px', background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid rgba(196,164,107,.2)' }}>
         {codesVisible ? (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 32 }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('level', lang)}</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>{parkingLevel}</div>
+          <>
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#C4A46B', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
+              {t('parking', lang)}
             </div>
-            <div style={{ width: 1, background: 'var(--bd)' }}/>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>{t('spot', lang)}</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>{parkingSpot}</div>
+            <div style={{ fontSize: 14, fontWeight: 400, color: '#2C2416', marginBottom: 4 }}>
+              Niveau {parkingLevel} · Place {parkingSpot}
             </div>
-          </div>
+            <div style={{ fontSize: 12, color: '#8B7355', fontWeight: 300 }}>
+              Badge dans le tiroir de l'entrée
+            </div>
+          </>
         ) : (
-          <div className="code-hint">{lockedMsg}</div>
+          <div style={{ textAlign: 'center', padding: '4px 0' }}>
+            <Icon name="lock" size={16} color="var(--muted)"/>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 300, marginTop: 6 }}>{lockedMsg}</div>
+          </div>
         )}
       </div>
 
