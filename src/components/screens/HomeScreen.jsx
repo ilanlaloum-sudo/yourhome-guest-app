@@ -119,9 +119,17 @@ export default function HomeScreen({ reservation, onNavigate, lang = 'fr', onTog
         </div>
       </div>
 
-      <div className="pbanner" style={{ background: banner.bg }}>
+      <div
+        className="pbanner"
+        style={{ background: banner.bg, cursor: 'pointer', transition: 'background .2s' }}
+        onClick={() => {
+          localStorage.setItem('prefilled_message', lang === 'fr' ? "Bonjour, j'ai besoin d'aide pour mon séjour" : 'Hello, I need help with my stay')
+          onNavigate(4)
+        }}
+      >
         <div className="pdot" style={{ background: banner.dot }}/>
-        <div style={{ fontSize: 12, color: 'var(--sub)', fontWeight: 400, lineHeight: 1.5 }}>{banner.txt}</div>
+        <div style={{ flex: 1, fontSize: 12, color: 'var(--sub)', fontWeight: 400, lineHeight: 1.5 }}>{banner.txt}</div>
+        <Icon name="chevronRight" size={14} color="var(--muted)"/>
       </div>
 
       <div className="slbl">{t('quickAccess', lang)}</div>

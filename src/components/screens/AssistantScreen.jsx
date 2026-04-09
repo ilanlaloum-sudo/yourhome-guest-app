@@ -69,6 +69,7 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   const [input, setInput] = useState('')
   const [convError, setConvError] = useState(null)
   const ref = useRef(null)
+  const inputRef = useRef(null)
   const reservationId = reservation?.id
   const guestId = session?.user?.id
   const stayPhase = reservation?.status || 'default'
@@ -78,6 +79,16 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   const { sendMessage, sending } = useSendMessage()
 
   const chips = CHIPS[lang]?.[stayPhase] || CHIPS[lang]?.default || CHIPS.fr.default
+
+  // Check for prefilled message from HomeScreen CTA
+  useEffect(() => {
+    const prefilled = localStorage.getItem('prefilled_message')
+    if (prefilled) {
+      setInput(prefilled)
+      localStorage.removeItem('prefilled_message')
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }, [])
 
   useEffect(() => {
     if (convErr) setConvError(typeof convErr === 'string' ? convErr : convErr.message || String(convErr))
@@ -211,6 +222,7 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
 
       <div className="cbar">
         <input
+          ref={inputRef}
           className="cinp"
           placeholder={t('placeholder', lang)}
           value={input}
