@@ -23,11 +23,12 @@ export const useConversation = (reservationId, guestId) => {
         }
         console.log('useConversation init — session uid:', session.user.id, 'reservationId:', reservationId)
 
-        // Resolve actual guest UUID from guests table
+        // Resolve actual guest UUID from guests table by email
+        console.log('looking up guest by email:', session.user.email)
         const { data: guestRow, error: guestErr } = await supabase
           .from('guests')
           .select('id')
-          .eq('supabase_user_id', session.user.id)
+          .eq('email', session.user.email)
           .maybeSingle()
 
         if (guestErr) {
