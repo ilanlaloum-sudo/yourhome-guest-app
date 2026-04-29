@@ -1,96 +1,85 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
-export const useConversation = (reservationId, guestId) => {
+const TENANT_CONCIERGE_URL = import.meta.env.VITE_TENANT_CONCIERGE_URL
+  ?? 'https://qscbpmqqcbjuobhwlcmw.supabase.co/functions/v1/tenant-concierge-run'
+
+/**
+ * Read-only resolver for the current guest's in_app conversation. Returns
+ * one of these `state` values so the caller can render the right UI:
+ *   - 'loading'          — initial fetch in flight
+ *   - 'ready'            — `conversation` is populated
+ *   - 'no_guest'         — auth user has no row in `guests` (mapping missing)
+ *   - 'no_conversation'  — guest has no open in_app conv yet; the edge
+ *                          function will create one on the first message
+ *   - 'error'            — RLS / network failure (`error` is populated)
+ */
+export const useConversation = () => {
   const [conversation, setConversation] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [state, setState] = useState('loading')
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!reservationId || !guestId) {
-      setLoading(false)
-      return
-    }
-
     let cancelled = false
 
     const init = async () => {
       try {
-        // Ensure we have a valid session
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
-          if (!cancelled) { setError('Not authenticated'); setLoading(false) }
+          if (!cancelled) { setState('error'); setError('Not authenticated') }
           return
         }
-        console.log('useConversation init — session uid:', session.user.id, 'email:', session.user.email, 'reservationId:', reservationId)
 
-        // Use session email to find guest, with auth token explicitly set
-        const { data: guestData } = await supabase
+        // Resolve the guest row for this auth user. RLS on `guests` must allow
+        // the row owner to read their own record (filtered on supabase_user_id).
+        const { data: guest, error: guestErr } = await supabase
           .from('guests')
           .select('id')
-          .eq('email', session.user.email)
+          .eq('supabase_user_id', session.user.id)
           .maybeSingle()
 
-        console.log('guest lookup result:', guestData, 'for email:', session.user.email)
-
-        // If still not found, hardcode the known guest UUID as fallback for testing
-        const actualGuestId = guestData?.id || '0838c573-b58e-41d5-8ade-ca22af15e3b2'
-        console.log('using guestId:', actualGuestId)
-
-        console.log('querying conversations for guest:', actualGuestId)
-        const { data, error: fetchErr } = await supabase
-          .from('conversations')
-          .select('*')
-          .eq('channel_type', 'in_app')
-          .eq('guest_id', actualGuestId)
-          .maybeSingle()
-
-        console.log('conversation query result:', data, 'error:', fetchErr)
-
-        if (fetchErr) {
-          console.log('conversation error:', fetchErr.message, fetchErr.code)
-          throw fetchErr
+        if (guestErr) throw guestErr
+        if (!guest) {
+          if (!cancelled) setState('no_guest')
+          return
         }
 
-        if (data) {
-          console.log('found existing conversation:', data.id)
-          if (!cancelled) setConversation(data)
-        } else {
-          console.log('no conversation found, creating new one')
-          const { data: newConv, error: insertErr } = await supabase
-            .from('conversations')
-            .insert({
-              channel_account_id: '0d0b663b-b04e-42cc-be96-1fe276ef277f',
-              guest_id: actualGuestId,
-              reservation_id: reservationId,
-              property_id: '05b9c4c2-bb96-431d-a099-394b239ee4bc',
-              status: 'open',
-              channel_type: 'in_app',
-              current_handoff_state: 'ai',
-            })
-            .select()
-            .single()
+        // Find the open in_app conversation. If none exists, the edge
+        // function will create it server-side on the first send.
+        const { data: conv, error: convErr } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('guest_id', guest.id)
+          .eq('channel_type', 'in_app')
+          .eq('status', 'open')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
 
-          if (insertErr) {
-            console.log('conversation insert error:', insertErr.message, insertErr.code)
-            throw insertErr
-          }
-          console.log('created new conversation:', newConv?.id)
-          if (!cancelled) setConversation(newConv)
+        if (convErr) throw convErr
+        if (!conv) {
+          if (!cancelled) setState('no_conversation')
+          return
+        }
+
+        if (!cancelled) {
+          setConversation(conv)
+          setState('ready')
         }
       } catch (err) {
         console.error('useConversation error:', err.message || err)
-        if (!cancelled) setError(err.message || String(err))
-      } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setError(err.message || String(err))
+          setState('error')
+        }
       }
     }
 
     init()
     return () => { cancelled = true }
-  }, [reservationId, guestId])
+  }, [])
 
-  return { conversation, loading, error }
+  return { conversation, state, error }
 }
 
 export const useMessages = (conversationId) => {
@@ -137,9 +126,9 @@ export const useMessages = (conversationId) => {
         (payload) => {
           setMessages((prev) => {
             const incoming = payload.new
-            // Skip if already exists by DB id
+            // Skip if already in state by DB id
             if (prev.some((m) => m.id === incoming.id)) return prev
-            // Replace optimistic message with the real DB version (match by content_text + direction)
+            // Replace optimistic placeholder with the real DB version
             const optIdx = prev.findIndex(
               (m) => String(m.id).startsWith('opt-') && m.content_text === incoming.content_text && m.direction === incoming.direction
             )
@@ -170,66 +159,44 @@ export const useMessages = (conversationId) => {
   return { messages, loading, addMessage }
 }
 
+/**
+ * Sends a guest message to tenant-concierge-run v2. The edge function owns
+ * conversation creation, message persistence, ticket creation, and routing
+ * decisions — the frontend just relays the text and renders the reply.
+ *
+ * Returns the full edge-function payload:
+ *   { reply, conversation_id, message_id, intent, confidence,
+ *     needs_ticket, ticket_id, needs_handoff, latency_ms, cost_usd }
+ */
 export const useSendMessage = () => {
   const [sending, setSending] = useState(false)
 
-  const sendMessage = useCallback(async ({ conversationId, reservationId, guestId, text, accessToken }) => {
-    if (!text.trim() || !conversationId) return null
+  const sendMessage = useCallback(async ({ conversationId, text, accessToken }) => {
+    if (!text.trim()) return null
+    if (!accessToken) throw new Error('Not authenticated')
     setSending(true)
 
     try {
-      // Optimistic user message
-      const userMsg = {
-        id: 'opt-user-' + Date.now(),
-        direction: 'outgoing',
-        role: 'user',
-        content_text: text,
-        created_at: new Date().toISOString(),
-      }
-
-      await supabase.from('messages').insert({
-        conversation_id: conversationId,
-        direction: 'outgoing',
-        role: 'user',
-        message_type: 'text',
-        content_text: text,
-      })
-
-      const { data, error: fnError } = await supabase.functions.invoke('swift-responder', {
-        body: {
-          conversation_id: conversationId,
-          reservation_id: reservationId,
-          guest_id: guestId,
-          message_text: text,
-          system_prompt: 'You are the concierge at The Opus, Business Bay, Dubai. Respond in 2-3 sentences maximum. No bullet points, no lists. Be direct, warm, and actionable — like a luxury hotel concierge. Propose a concrete next step. Respond in the same language the guest uses.',
+      const res = await fetch(TENANT_CONCIERGE_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        body: JSON.stringify({
+          message: text,
+          conversation_id: conversationId ?? null,
+        }),
       })
 
-      if (fnError) throw fnError
-
-      console.log('swift-responder response:', JSON.stringify(data))
-      const replyText = data?.reply || data?.message
-      if (replyText) {
-        const assistantMsg = {
-          id: 'opt-asst-' + Date.now(),
-          direction: 'incoming',
-          role: 'assistant',
-          content_text: replyText,
-          created_at: new Date().toISOString(),
-        }
-
-        await supabase.from('messages').insert({
-          conversation_id: conversationId,
-          direction: 'incoming',
-          role: 'assistant',
-          message_type: 'text',
-          content_text: replyText,
-        })
-
-        return assistantMsg
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        const e = new Error(body.error ?? `HTTP ${res.status}`)
+        e.status = res.status
+        throw e
       }
-      return null
+
+      return await res.json()
     } catch (err) {
       console.error('sendMessage error:', err)
       throw err

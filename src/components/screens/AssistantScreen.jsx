@@ -61,6 +61,18 @@ const T = {
   retry:      { fr: 'Réessayer',  en: 'Retry' },
   greeting:   { fr: 'Bonjour ! Je suis votre concierge The Opus. Comment puis-je vous aider ?', en: 'Hello! I\'m your concierge at The Opus. How can I help?' },
   placeholder:{ fr: 'Posez votre question...', en: 'Ask your question...' },
+  noReservation: {
+    fr: 'Aucune réservation active sur votre compte.\nLe chat conciergerie sera disponible pendant votre séjour.',
+    en: 'No active reservation on your account.\nThe concierge chat will be available during your stay.',
+  },
+  noGuest: {
+    fr: 'Profil locataire introuvable. Contactez le support pour activer votre compte.',
+    en: 'Tenant profile not found. Contact support to activate your account.',
+  },
+  sendErr: {
+    fr: 'Échec de l\'envoi. Réessayez dans un instant.',
+    en: 'Send failed. Please try again in a moment.',
+  },
 }
 
 const t = (key, lang) => T[key]?.[lang] || T[key]?.fr || key
@@ -68,15 +80,23 @@ const t = (key, lang) => T[key]?.[lang] || T[key]?.fr || key
 export default function AssistantScreen({ reservation, session, lang = 'fr', onToggleLang, onSignOut }) {
   const [input, setInput] = useState('')
   const [convError, setConvError] = useState(null)
+  const [sendError, setSendError] = useState(null)
+  const [activeConvId, setActiveConvId] = useState(null)
   const ref = useRef(null)
   const inputRef = useRef(null)
-  const reservationId = reservation?.id
-  const guestId = session?.user?.id
   const stayPhase = reservation?.status || 'default'
 
-  const { conversation, loading: convLoading, error: convErr } = useConversation(reservationId, guestId)
-  const { messages, loading: messagesLoading, addMessage } = useMessages(conversation?.id)
+  const { conversation, state: convState, error: convErr } = useConversation()
+  const { messages, loading: messagesLoading, addMessage } = useMessages(activeConvId)
   const { sendMessage, sending } = useSendMessage()
+
+  // Sync the local active conversation id with the hook resolution. The id can
+  // also be assigned later by the edge function on the very first send.
+  useEffect(() => {
+    if (conversation?.id && conversation.id !== activeConvId) {
+      setActiveConvId(conversation.id)
+    }
+  }, [conversation?.id, activeConvId])
 
   const chips = CHIPS[lang]?.[stayPhase] || CHIPS[lang]?.default || CHIPS.fr.default
 
@@ -91,17 +111,21 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   }, [])
 
   useEffect(() => {
-    if (convErr) setConvError(typeof convErr === 'string' ? convErr : convErr.message || String(convErr))
-    else if (conversation) setConvError(null)
-  }, [convErr, conversation])
+    if (convState === 'error' && convErr) {
+      setConvError(typeof convErr === 'string' ? convErr : convErr.message || String(convErr))
+    } else {
+      setConvError(null)
+    }
+  }, [convState, convErr])
 
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const handleSend = async (text) => {
-    if (!text.trim() || !conversation?.id) return
+    if (!text.trim() || sending) return
     setInput('')
+    setSendError(null)
 
     addMessage({
       id: 'opt-user-' + Date.now(),
@@ -113,20 +137,55 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
 
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession()
-      const assistantMsg = await sendMessage({
-        conversationId: conversation.id,
-        reservationId,
-        guestId,
+      const data = await sendMessage({
+        conversationId: activeConvId,
         text,
         accessToken: currentSession?.access_token,
       })
 
-      if (assistantMsg) {
-        addMessage(assistantMsg)
+      if (data?.conversation_id && data.conversation_id !== activeConvId) {
+        setActiveConvId(data.conversation_id)
+      }
+
+      if (data?.reply) {
+        addMessage({
+          id: 'opt-asst-' + Date.now(),
+          direction: 'incoming',
+          role: 'assistant',
+          content_text: data.reply,
+          created_at: new Date().toISOString(),
+        })
       }
     } catch (err) {
       console.error(err)
+      setSendError(t('sendErr', lang))
     }
+  }
+
+  // Hard guards — rendered before the chat shell so we don't show a half-broken
+  // assistant when the prerequisites aren't met.
+  if (!reservation) {
+    return (
+      <AssistantUnavailable
+        lang={lang}
+        onToggleLang={onToggleLang}
+        session={session}
+        onSignOut={onSignOut}
+        title={t('noReservation', lang).split('\n')[0]}
+        body={t('noReservation', lang).split('\n').slice(1).join(' ')}
+      />
+    )
+  }
+  if (convState === 'no_guest') {
+    return (
+      <AssistantUnavailable
+        lang={lang}
+        onToggleLang={onToggleLang}
+        session={session}
+        onSignOut={onSignOut}
+        title={t('noGuest', lang)}
+      />
+    )
   }
 
   return (
@@ -220,6 +279,12 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
         <div ref={ref}/>
       </div>
 
+      {sendError && (
+        <div style={{ padding: '6px var(--px) 0', fontSize: 11, color: '#B85050', textAlign: 'center' }}>
+          {sendError}
+        </div>
+      )}
+
       <div className="cbar">
         <input
           ref={inputRef}
@@ -232,6 +297,39 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
         <button className="csnd" onClick={() => handleSend(input)} disabled={sending}>
           <Icon name="send" size={15} color="#fff"/>
         </button>
+      </div>
+    </div>
+  )
+}
+
+function AssistantUnavailable({ lang, onToggleLang, session, onSignOut, title, body }) {
+  return (
+    <div className="page" style={{ paddingBottom: 160 }}>
+      <Header lang={lang} onToggleLang={onToggleLang} session={session} onSignOut={onSignOut}/>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        padding: '60px var(--px)',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 20,
+          background: 'linear-gradient(135deg,#C4A46B,#8A6A38)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon name="sparkles" size={26} color="#fff" strokeWidth={1.5}/>
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)', maxWidth: 320 }}>
+          {title}
+        </div>
+        {body && (
+          <div style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 320, lineHeight: 1.5 }}>
+            {body}
+          </div>
+        )}
       </div>
     </div>
   )
