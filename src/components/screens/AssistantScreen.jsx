@@ -91,6 +91,7 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
   const [activeConvId, setActiveConvId] = useState(null)
   const ref = useRef(null)
   const inputRef = useRef(null)
+  const sendIdRef = useRef(0)
   const stayPhase = reservation?.status || 'default'
 
   const { conversation, state: convState, error: convErr } = useConversation()
@@ -134,6 +135,9 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
     setInput('')
     setSendError(null)
 
+    // Tag this send so a stale failure cannot override a fresher success.
+    const sendId = ++sendIdRef.current
+
     addMessage({
       id: 'opt-user-' + Date.now(),
       direction: 'inbound',
@@ -142,20 +146,36 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
       created_at: new Date().toISOString(),
     })
 
+    // getSession is intentionally outside the try/catch below. The try block
+    // wraps ONLY the network call so post-API state updates can never trigger
+    // the "Échec de l'envoi" banner.
+    const sessionResult = await supabase.auth.getSession().catch((err) => {
+      console.error('[handleSend] getSession failed:', err)
+      return null
+    })
+    const currentSession = sessionResult?.data?.session ?? null
+
     let data
     try {
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
       data = await sendMessage({
         conversationId: activeConvId,
         text,
         accessToken: currentSession?.access_token,
       })
     } catch (err) {
-      console.error(err)
+      // Only the LATEST send can show an error. If a newer send already
+      // succeeded, this stale failure is silently dropped.
+      if (sendId !== sendIdRef.current) return
+      console.error(
+        '[handleSend] setSendError triggered — message:', err?.message,
+        '\nstack:', err?.stack,
+      )
       setSendError(t('sendErr', lang))
       return
     }
 
+    // Success path. No throw possible here is allowed to set sendError.
+    if (sendId !== sendIdRef.current) return
     setSendError(null)
 
     if (data?.conversation_id && data.conversation_id !== activeConvId) {

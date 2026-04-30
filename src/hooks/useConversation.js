@@ -181,8 +181,9 @@ export const useSendMessage = () => {
     if (!accessToken) throw new Error('Not authenticated')
     setSending(true)
 
+    let res
     try {
-      const res = await fetch(TENANT_CONCIERGE_URL, {
+      res = await fetch(TENANT_CONCIERGE_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -193,21 +194,32 @@ export const useSendMessage = () => {
           conversation_id: conversationId ?? null,
         }),
       })
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        const e = new Error(body.error ?? `HTTP ${res.status}`)
-        e.status = res.status
-        throw e
-      }
-
-      return await res.json()
     } catch (err) {
-      console.error('sendMessage error:', err)
-      throw err
-    } finally {
       setSending(false)
+      console.error('[sendMessage] network failure:', err)
+      throw err
     }
+
+    if (!res.ok) {
+      setSending(false)
+      const body = await res.json().catch(() => ({}))
+      const e = new Error(body.error ?? `HTTP ${res.status}`)
+      e.status = res.status
+      console.error('[sendMessage] non-2xx:', e)
+      throw e
+    }
+
+    // 2xx: the server has already persisted the message. A malformed/empty
+    // body must NOT surface as an "Échec de l'envoi" — Realtime will still
+    // deliver the assistant reply. Return whatever we can parse.
+    let data = null
+    try {
+      data = await res.json()
+    } catch (err) {
+      console.warn('[sendMessage] 2xx but body unparseable, treating as success:', err)
+    }
+    setSending(false)
+    return data
   }, [])
 
   return { sendMessage, sending }
