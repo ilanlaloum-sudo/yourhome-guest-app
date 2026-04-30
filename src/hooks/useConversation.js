@@ -128,9 +128,14 @@ export const useMessages = (conversationId) => {
             const incoming = payload.new
             // Skip if already in state by DB id
             if (prev.some((m) => m.id === incoming.id)) return prev
-            // Replace optimistic placeholder with the real DB version
+            // Replace the matching optimistic placeholder with the real DB row.
+            // Optimistic ids are 'opt-*'; the canonical match is direction +
+            // content_text since the optimistic id never reaches the server.
             const optIdx = prev.findIndex(
-              (m) => String(m.id).startsWith('opt-') && m.content_text === incoming.content_text && m.direction === incoming.direction
+              (m) =>
+                String(m.id).startsWith('opt-') &&
+                m.direction === incoming.direction &&
+                m.content_text === incoming.content_text
             )
             if (optIdx !== -1) {
               const updated = [...prev]

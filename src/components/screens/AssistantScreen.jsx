@@ -59,7 +59,14 @@ const T = {
   online:     { fr: 'En ligne',   en: 'Online' },
   loadErr:    { fr: 'Impossible de charger la conversation.', en: 'Unable to load conversation.' },
   retry:      { fr: 'Réessayer',  en: 'Retry' },
-  greeting:   { fr: 'Bonjour ! Je suis votre concierge The Opus. Comment puis-je vous aider ?', en: 'Hello! I\'m your concierge at The Opus. How can I help?' },
+  greeting: {
+    fr: 'Bonjour ! Je suis votre concierge Your Home. Comment puis-je vous aider ?',
+    en: 'Hello! I\'m your Your Home concierge. How can I help?',
+  },
+  greetingWithProperty: {
+    fr: (name) => `Bonjour ! Je suis votre concierge Your Home. Comment puis-je vous aider pendant votre séjour à ${name} ?`,
+    en: (name) => `Hello! I'm your Your Home concierge. How can I help during your stay at ${name}?`,
+  },
   placeholder:{ fr: 'Posez votre question...', en: 'Ask your question...' },
   noReservation: {
     fr: 'Aucune réservation active sur votre compte.\nLe chat conciergerie sera disponible pendant votre séjour.',
@@ -129,36 +136,40 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
 
     addMessage({
       id: 'opt-user-' + Date.now(),
-      direction: 'outgoing',
-      role: 'user',
+      direction: 'inbound',
+      role: 'guest',
       content_text: text,
       created_at: new Date().toISOString(),
     })
 
+    let data
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession()
-      const data = await sendMessage({
+      data = await sendMessage({
         conversationId: activeConvId,
         text,
         accessToken: currentSession?.access_token,
       })
-
-      if (data?.conversation_id && data.conversation_id !== activeConvId) {
-        setActiveConvId(data.conversation_id)
-      }
-
-      if (data?.reply) {
-        addMessage({
-          id: 'opt-asst-' + Date.now(),
-          direction: 'incoming',
-          role: 'assistant',
-          content_text: data.reply,
-          created_at: new Date().toISOString(),
-        })
-      }
     } catch (err) {
       console.error(err)
       setSendError(t('sendErr', lang))
+      return
+    }
+
+    setSendError(null)
+
+    if (data?.conversation_id && data.conversation_id !== activeConvId) {
+      setActiveConvId(data.conversation_id)
+    }
+
+    if (data?.reply) {
+      addMessage({
+        id: 'opt-asst-' + Date.now(),
+        direction: 'outbound',
+        role: 'assistant',
+        content_text: data.reply,
+        created_at: new Date().toISOString(),
+      })
     }
   }
 
@@ -252,18 +263,23 @@ export default function AssistantScreen({ reservation, session, lang = 'fr', onT
           <div style={{ alignSelf: 'flex-start' }}>
             <div className="bsndr">Assistant</div>
             <div className="bbl ai">
-              {t('greeting', lang)}
+              {reservation?.property_name
+                ? T.greetingWithProperty[lang](reservation.property_name)
+                : t('greeting', lang)}
             </div>
           </div>
         ) : (
-          messages.map((m, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.direction === 'outgoing' ? 'flex-end' : 'flex-start' }}>
-              {m.direction !== 'outgoing' && <div className="bsndr">Assistant</div>}
-              <div className={`bbl ${m.direction === 'outgoing' ? 'usr' : 'ai'}`}>
-                {m.content_text}
+          messages.map((m, i) => {
+            const isUser = m.direction === 'inbound'
+            return (
+              <div key={m.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+                {!isUser && <div className="bsndr">Assistant</div>}
+                <div className={`bbl ${isUser ? 'usr' : 'ai'}`}>
+                  {m.content_text}
+                </div>
               </div>
-            </div>
-          ))
+            )
+          })
         )}
 
         {sending && (
